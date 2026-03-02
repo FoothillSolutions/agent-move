@@ -1,0 +1,24 @@
+{
+  "name": "agentflow",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Watch your Claude Code agents come alive as pixel-art characters in a 2D world",
+  "license": "MIT",
+  "workspaces": [
+    "packages/shared",
+    "packages/server",
+    "packages/client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev -w @agentflow/server\" \"npm run dev -w @agentflow/client\"",
+    "build": "npm run build -w @agentflow/shared && npm run build -w @agentflow/server && npm run build -w @agentflow/client",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@esbuild/win32-x64": "^0.27.3"
+  }
+}
