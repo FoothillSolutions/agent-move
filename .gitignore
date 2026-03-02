@@ -1,1 +1,5 @@
-node_modules/\ndist/\n.vite/\n*.tsbuildinfo
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+.playwright-mcp/
