@@ -1,4 +1,6 @@
 import { basename, dirname, sep } from 'path';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
 export interface SessionInfo {
   projectPath: string;
@@ -42,17 +44,65 @@ class ClaudePaths {
 
   /**
    * Decode Claude Code's encoded project path format.
-   * e.g., "C--projects-fts-temp-agent-move" → "C:/projects/fts/temp/agent-move"
+   * Resolves against the filesystem to correctly handle dashes in folder names.
+   * e.g., "C--projects-fts-temp-agent-move" → "agent-move"
    */
   decodeProjectName(encoded: string): string {
-    // The encoding replaces path separators with dashes
-    // First segment before first dash might be drive letter on Windows
-    // Just use the last segment as a friendly name
-    const parts = encoded.split('-');
-    // Return last 2-3 meaningful parts as project name
-    const meaningful = parts.filter((p) => p.length > 0);
-    if (meaningful.length <= 2) return meaningful.join('/');
-    return meaningful.slice(-2).join('/');
+    const resolved = this.resolveToFolderName(encoded);
+    if (resolved) return resolved;
+
+    // Fallback: last 2 dash-segments joined
+    const parts = encoded.split('-').filter((p) => p.length > 0);
+    if (parts.length <= 2) return parts.join('/');
+    return parts.slice(-2).join('/');
+  }
+
+  /**
+   * Greedily resolve the encoded path against the filesystem.
+   * Tries each dash-segment as a directory, joining multiple segments
+   * when a single one doesn't exist (to handle dashes in folder names).
+   */
+  private resolveToFolderName(encoded: string): string | null {
+    try {
+      // Extract drive letter: C-- → C:/
+      const driveMatch = encoded.match(/^([A-Za-z])--(.*)/);
+      if (!driveMatch) return null;
+
+      const drive = driveMatch[1] + ':/';
+      const rest = driveMatch[2];
+      const parts = rest.split('-').filter(Boolean);
+
+      let currentPath = drive;
+      let lastName = '';
+      let i = 0;
+
+      while (i < parts.length) {
+        let found = false;
+        const maxLen = Math.min(parts.length - i, 6);
+
+        for (let len = 1; len <= maxLen; len++) {
+          const segment = parts.slice(i, i + len).join('-');
+
+          // Try normal path, then dot-prefixed (for hidden dirs like .claude)
+          for (const prefix of ['', '.']) {
+            const testPath = join(currentPath, prefix + segment);
+            if (existsSync(testPath)) {
+              currentPath = testPath;
+              lastName = prefix + segment;
+              i += len;
+              found = true;
+              break;
+            }
+          }
+          if (found) break;
+        }
+        if (!found) break;
+      }
+
+      return lastName || null;
+    } catch {
+      return null;
+    }
   }
 }
 
