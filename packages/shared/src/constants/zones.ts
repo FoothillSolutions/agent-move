@@ -1,7 +1,7 @@
 import type { ZoneConfig } from '../types/zone.js';
 
-const ZONE_SIZE = 280;
-const GAP = 28;
+const ZONE_SIZE = 340;
+const GAP = 16;
 const COLS = 3;
 
 function zonePos(index: number): { x: number; y: number } {

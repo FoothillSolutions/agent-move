@@ -42,12 +42,21 @@ export class WorldManager {
     // Set up camera
     this.camera = new Camera(app, this.root);
 
-    // Center camera initially
+    // Auto-fit all zones into the available viewport (accounting for sidebar)
     const screenW = app.screen.width;
     const screenH = app.screen.height;
+    const sidebarW = 300;
+    const availW = screenW - sidebarW;
+    const pad = 16;
+
+    const scaleX = (availW - pad * 2) / WORLD_WIDTH;
+    const scaleY = (screenH - pad * 2) / WORLD_HEIGHT;
+    const fitZoom = Math.min(scaleX, scaleY, 1); // don't upscale beyond 1x
+
+    this.camera.setZoom(fitZoom);
     this.root.position.set(
-      (screenW - WORLD_WIDTH) / 2,
-      (screenH - WORLD_HEIGHT) / 2,
+      (availW - WORLD_WIDTH * fitZoom) / 2,
+      (screenH - WORLD_HEIGHT * fitZoom) / 2,
     );
   }
 

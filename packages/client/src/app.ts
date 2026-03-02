@@ -7,7 +7,7 @@ export async function createApp(container: HTMLElement): Promise<Application> {
   await app.init({
     background: COLORS.background,
     resizeTo: container,
-    antialias: true,
+    antialias: false,
     resolution: window.devicePixelRatio || 1,
     autoDensity: true,
   });
