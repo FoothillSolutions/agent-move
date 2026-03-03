@@ -4,6 +4,7 @@ Publish a new version of agent-move to npm.
 
 1. Run `npm run build` and confirm it succeeds
 2. Run `npm version $ARGUMENTS` to bump the version (user passes `patch`, `minor`, or `major` as the argument — default to `patch` if no argument given)
-3. Run `npm publish` to publish to npm
-4. Run `git push && git push --tags` to push the version commit and tag
-5. Print the new version number and the npm URL: https://www.npmjs.com/package/agent-move
+3. Run `git push && git push --tags` to push the version commit and tag to GitHub
+4. Print the new version number and these links:
+   - npm: https://www.npmjs.com/package/agent-move
+   - GitHub Actions will handle `npm publish` and create the GitHub Release automatically
