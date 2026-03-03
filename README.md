@@ -1,24 +1,24 @@
 <div align="center">
 
-# AgentFlow
+# AgentMove
 
-**Watch your Claude Code agents come alive.**
+**Watch your AI coding agents come alive.**
 
-A real-time pixel-art visualizer that turns Claude Code sessions into a living 2D world. Agents walk between rooms, use tools, chat, and rest — all rendered at 60fps in your browser.
+A real-time pixel-art visualizer that turns AI coding sessions into a living 2D world. Agents walk between rooms, use tools, chat, and rest — all rendered at 60fps in your browser.
 
 ```
-npx claude-agentflow
+npx agent-move
 ```
 
 <br>
 
-<img src=".github/screenshot.png" alt="AgentFlow screenshot showing pixel-art agents in a 2D world with 9 activity zones" width="800">
+<img src=".github/screenshot.png" alt="AgentMove screenshot showing pixel-art agents in a 2D world with 9 activity zones" width="800">
 
 <br>
 <br>
 
-[![npm version](https://img.shields.io/npm/v/claude-agentflow)](https://www.npmjs.com/package/claude-agentflow)
-[![license](https://img.shields.io/npm/l/claude-agentflow)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/agent-move)](https://www.npmjs.com/package/agent-move)
+[![license](https://img.shields.io/npm/l/agent-move)](LICENSE)
 
 </div>
 
@@ -26,7 +26,7 @@ npx claude-agentflow
 
 ## What You're Looking At
 
-AgentFlow reads Claude Code's local session files (`~/.claude/projects/**/*.jsonl`) and maps every tool call to one of **9 activity zones**. Each agent gets a unique pixel-art character that physically walks between zones as it works.
+AgentMove reads AI coding agent session files (`~/.claude/projects/**/*.jsonl`) and maps every tool call to one of **9 activity zones**. Each agent gets a unique pixel-art character that physically walks between zones as it works.
 
 | Zone | What Happens There | Tools |
 |------|--------------------|-------|
@@ -50,22 +50,22 @@ AgentFlow reads Claude Code's local session files (`~/.claude/projects/**/*.json
 ### One Command
 
 ```bash
-npx claude-agentflow
+npx agent-move
 ```
 
-That's it. The server starts, your browser opens, and any active Claude Code session is visualized immediately.
+That's it. The server starts, your browser opens, and any active coding session is visualized immediately.
 
 ### Options
 
 ```bash
-npx claude-agentflow --port 4000    # custom port (default: 3333)
+npx agent-move --port 4000    # custom port (default: 3333)
 ```
 
 ### From Source (for development)
 
 ```bash
-git clone https://github.com/AbdullahSAhmad/claude-agentflow.git
-cd claude-agentflow
+git clone https://github.com/AbdullahSAhmad/agent-move.git
+cd agent-move
 npm install
 npm run dev
 ```
@@ -89,7 +89,7 @@ This starts the server on `:3333` and the Vite dev server on `:5173` with hot re
 ## How It Works
 
 ```
-Claude Code writes JSONL session files
+AI agent writes JSONL session files
   → chokidar detects file changes
   → Only new bytes are read (byte-offset tracking)
   → JSONL parsed for tool_use / text / token_usage blocks
@@ -105,7 +105,7 @@ Claude Code writes JSONL session files
 Three-package monorepo (npm workspaces):
 
 ```
-claude-agentflow/
+agent-move/
 ├── bin/cli.js              # npx entry point
 ├── packages/
 │   ├── shared/             # Types & constants (zero dependencies)

@@ -1,5 +1,5 @@
-import type { AgentState } from '@agentflow/shared';
-import { AGENT_PALETTES } from '@agentflow/shared';
+import type { AgentState } from '@agent-move/shared';
+import { AGENT_PALETTES } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 import { hexToCss } from '../utils/formatting.js';
 

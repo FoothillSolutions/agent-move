@@ -1,5 +1,5 @@
-import { ZONES, ZONE_MAP } from '@agentflow/shared';
-import type { ZoneId } from '@agentflow/shared';
+import { ZONES, ZONE_MAP } from '@agent-move/shared';
+import type { ZoneId } from '@agent-move/shared';
 import type { WorldManager } from '../world/world-manager.js';
 
 /** Persisted layout entry per zone */
@@ -16,7 +16,7 @@ interface ExportedLayout {
   zones: Record<string, ZoneLayout>;
 }
 
-const STORAGE_KEY = 'agentflow-layout';
+const STORAGE_KEY = 'agent-move-layout';
 const MIN_SIZE = 200;
 const MAX_UNDO = 50;
 
@@ -498,7 +498,7 @@ export class LayoutEditor {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'agentflow-layout.json';
+    a.download = 'agent-move-layout.json';
     a.click();
     URL.revokeObjectURL(url);
   }

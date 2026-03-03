@@ -1,5 +1,5 @@
 import { Application } from 'pixi.js';
-import { COLORS } from '@agentflow/shared';
+import { COLORS } from '@agent-move/shared';
 
 export async function createApp(container: HTMLElement): Promise<Application> {
   const app = new Application();

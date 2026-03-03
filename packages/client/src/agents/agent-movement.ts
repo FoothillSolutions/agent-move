@@ -1,4 +1,4 @@
-import type { ZoneConfig } from '@agentflow/shared';
+import type { ZoneConfig } from '@agent-move/shared';
 
 const MOVE_SPEED = 100; // pixels per second
 const ARRIVAL_THRESHOLD = 3; // pixels

@@ -1,5 +1,5 @@
-import { AGENT_PALETTES } from '@agentflow/shared';
-import type { AgentPalette } from '@agentflow/shared';
+import { AGENT_PALETTES } from '@agent-move/shared';
+import type { AgentPalette } from '@agent-move/shared';
 import type { PaletteKey } from './sprite-data.js';
 
 export { AGENT_PALETTES };

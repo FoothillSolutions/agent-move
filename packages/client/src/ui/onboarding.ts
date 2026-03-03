@@ -3,7 +3,7 @@
  * Persists dismissal in localStorage so it only shows once.
  */
 
-const STORAGE_KEY = 'agentflow:onboarding-dismissed';
+const STORAGE_KEY = 'agent-move:onboarding-dismissed';
 
 export class Onboarding {
   private el: HTMLElement | null = null;
@@ -39,7 +39,7 @@ export class Onboarding {
     this.el.innerHTML = `
       <div class="ob-card">
         <div class="ob-header">
-          <span class="ob-logo">AgentFlow</span>
+          <span class="ob-logo">AgentMove</span>
           <button class="ob-close">&times;</button>
         </div>
         <div class="ob-body">

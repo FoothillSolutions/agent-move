@@ -1,4 +1,4 @@
-import type { JsonlMessage, ContentBlock, ToolUseBlock, TextBlock } from '@agentflow/shared';
+import type { JsonlMessage, ContentBlock, ToolUseBlock, TextBlock } from '@agent-move/shared';
 
 export interface ParsedActivity {
   type: 'tool_use' | 'text' | 'token_usage';

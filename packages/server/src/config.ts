@@ -2,7 +2,7 @@ import { homedir } from 'os';
 import { join } from 'path';
 
 export const config = {
-  port: parseInt(process.env.AGENTFLOW_PORT || '3333', 10),
+  port: parseInt(process.env.AGENT_MOVE_PORT || '3333', 10),
   claudeHome: join(homedir(), '.claude'),
   idleTimeoutMs: 15_000,
   /** How long after going idle before an agent is automatically shutdown/removed */

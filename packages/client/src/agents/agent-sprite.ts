@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, Text, TextStyle, Texture } from 'pixi.js';
-import type { AgentState, AgentPalette } from '@agentflow/shared';
-import { COLORS } from '@agentflow/shared';
+import type { AgentState, AgentPalette } from '@agent-move/shared';
+import { COLORS } from '@agent-move/shared';
 import { MAIN_SPRITES, SUB_SPRITES, type SpriteSet } from '../sprites/sprite-data.js';
 import { createSpriteTexture, spriteKey } from '../sprites/sprite-factory.js';
 

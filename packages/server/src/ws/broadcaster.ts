@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws';
 import type { AgentStateManager } from '../state/agent-state-manager.js';
-import type { ServerMessage, AgentEvent } from '@agentflow/shared';
+import type { ServerMessage, AgentEvent } from '@agent-move/shared';
 
 export class Broadcaster {
   private clients = new Set<WebSocket>();

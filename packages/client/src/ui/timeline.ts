@@ -1,5 +1,5 @@
-import type { AgentState, TimelineEvent, ZoneId } from '@agentflow/shared';
-import { AGENT_PALETTES } from '@agentflow/shared';
+import type { AgentState, TimelineEvent, ZoneId } from '@agent-move/shared';
+import { AGENT_PALETTES } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 
 /** Event type categories for filtering */

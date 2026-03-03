@@ -49,7 +49,7 @@ export class NotificationManager {
         body,
         icon: '/favicon.ico',
         silent: true, // We have our own sounds
-        tag: 'agentflow', // Replace previous notification
+        tag: 'agent-move', // Replace previous notification
       });
     } catch {
       // Notifications not supported in this context

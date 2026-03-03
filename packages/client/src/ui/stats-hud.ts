@@ -1,5 +1,5 @@
-import type { AgentState } from '@agentflow/shared';
-import { getModelPricing } from '@agentflow/shared';
+import type { AgentState } from '@agent-move/shared';
+import { getModelPricing } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 import { formatTokens } from '../utils/formatting.js';
 

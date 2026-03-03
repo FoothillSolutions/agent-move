@@ -5,7 +5,7 @@ export default defineConfig({
   root: resolve(__dirname),
   resolve: {
     alias: {
-      '@agentflow/shared': resolve(__dirname, '../shared/src'),
+      '@agent-move/shared': resolve(__dirname, '../shared/src'),
     },
   },
   server: {

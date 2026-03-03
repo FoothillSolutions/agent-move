@@ -1,4 +1,4 @@
-import type { ZoneId } from '@agentflow/shared';
+import type { ZoneId } from '@agent-move/shared';
 
 /**
  * Track per-zone agent counts to drive zone glow effects.

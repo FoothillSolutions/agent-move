@@ -1,5 +1,5 @@
-import type { AgentState, ZoneId } from '@agentflow/shared';
-import { AGENT_PALETTES, ZONES, ZONE_MAP, getModelPricing } from '@agentflow/shared';
+import type { AgentState, ZoneId } from '@agent-move/shared';
+import { AGENT_PALETTES, ZONES, ZONE_MAP, getModelPricing } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 import { escapeHtml, hexToCss, formatTokens, formatDuration } from '../utils/formatting.js';
 

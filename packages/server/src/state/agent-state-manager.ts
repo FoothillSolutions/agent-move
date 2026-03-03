@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
-import type { AgentState, AgentEvent, ZoneId, ActivityEntry, TimelineEvent } from '@agentflow/shared';
-import { getZoneForTool } from '@agentflow/shared';
+import type { AgentState, AgentEvent, ZoneId, ActivityEntry, TimelineEvent } from '@agent-move/shared';
+import { getZoneForTool } from '@agent-move/shared';
 import { config } from '../config.js';
 import type { ParsedActivity } from '../watcher/jsonl-parser.js';
 import type { SessionInfo } from '../watcher/claude-paths.js';
@@ -221,13 +221,9 @@ export class AgentStateManager extends EventEmitter {
    * All others stay as subagents (even if they have a name).
    */
   private determineRoleForNamed(parentId: string | null, pendingTeam: string | null): AgentState['role'] {
-    // Explicit team assignment from Agent tool's team_name parameter
+    // Only explicit team assignment (Agent tool's team_name parameter) makes a team-member.
+    // Sub-agents spawned by the team-lead without team_name stay as subagents.
     if (pendingTeam) return 'team-member';
-    if (!parentId) return 'subagent';
-    const parent = this.agents.get(parentId);
-    if (!parent) return 'subagent';
-    // Only direct children of team-lead become team-members
-    if (parent.role === 'team-lead' && parent.teamName) return 'team-member';
     return 'subagent';
   }
 

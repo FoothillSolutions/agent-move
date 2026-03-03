@@ -81,7 +81,7 @@ export async function main() {
 }
 
 // Auto-run when executed directly (not via CLI wrapper)
-if (!process.env.__AGENTFLOW_CLI) {
+if (!process.env.__AGENT_MOVE_CLI) {
   main().catch((err) => {
     console.error('Failed to start server:', err);
     process.exit(1);

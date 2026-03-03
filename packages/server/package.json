@@ -1,5 +1,5 @@
 {
-  "name": "@agentflow/server",
+  "name": "@agent-move/server",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@agentflow/shared": "*",
+    "@agent-move/shared": "*",
     "fastify": "^5.2.1",
     "@fastify/websocket": "^11.0.2",
     "@fastify/cors": "^10.0.2",

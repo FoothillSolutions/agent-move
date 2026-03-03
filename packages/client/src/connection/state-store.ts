@@ -1,4 +1,4 @@
-import type { AgentState, ServerMessage, ActivityEntry, TimelineEvent } from '@agentflow/shared';
+import type { AgentState, ServerMessage, ActivityEntry, TimelineEvent } from '@agent-move/shared';
 import type { WsClient } from './ws-client.js';
 
 export type ConnectionStatus = 'connected' | 'disconnected';

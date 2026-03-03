@@ -1,5 +1,5 @@
-import type { AgentState, ZoneId } from '@agentflow/shared';
-import { AGENT_PALETTES, ZONE_MAP, ZONES } from '@agentflow/shared';
+import type { AgentState, ZoneId } from '@agent-move/shared';
+import { AGENT_PALETTES, ZONE_MAP, ZONES } from '@agent-move/shared';
 import type { StateStore, ConnectionStatus } from '../connection/state-store.js';
 import { escapeHtml, escapeAttr, truncate, formatTokenPair, hexToCss } from '../utils/formatting.js';
 
@@ -322,15 +322,6 @@ export class Overlay {
       });
     });
 
-    // Attach kill button handlers
-    this.agentListEl.querySelectorAll('.card-kill-btn').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const id = (btn as HTMLElement).dataset.killId;
-        if (id) this.killAgent(id);
-      });
-    });
-
     // Render sparklines onto canvases
     this.agentListEl.querySelectorAll('.sparkline-canvas').forEach((canvas) => {
       const agentId = (canvas as HTMLElement).dataset.agentId;
@@ -399,7 +390,6 @@ export class Overlay {
         <div class="name">${isChild ? '<span class="child-connector">└</span>' : ''}${name}${this.roleBadge(agent.role)}${doneBadge}${subBadge}</div>
         <div class="card-actions">
           <canvas class="sparkline-canvas" data-agent-id="${agent.id}" width="60" height="20"></canvas>
-          <button class="card-kill-btn" data-kill-id="${agent.id}" title="Kill agent">&times;</button>
         </div>
       </div>
       ${agent.taskDescription ? `<div class="task-desc" title="${escapeAttr(agent.taskDescription)}">${escapeHtml(truncate(agent.taskDescription, 48))}</div>` : ''}
@@ -452,18 +442,6 @@ export class Overlay {
     ctx.strokeStyle = '#4ade80';
     ctx.lineWidth = 1.5;
     ctx.stroke();
-  }
-
-  private async killAgent(agentId: string): Promise<void> {
-    try {
-      const res = await fetch(`/api/agents/${agentId}/shutdown`, { method: 'POST' });
-      if (res.ok) {
-        this.renderFilters();
-        this.renderAgents();
-      }
-    } catch (err) {
-      console.error('Failed to kill agent:', err);
-    }
   }
 
   private async cleanDoneAgents(): Promise<void> {

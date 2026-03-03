@@ -1,5 +1,5 @@
-import type { AgentState, ActivityEntry } from '@agentflow/shared';
-import { AGENT_PALETTES, ZONE_MAP } from '@agentflow/shared';
+import type { AgentState, ActivityEntry } from '@agent-move/shared';
+import { AGENT_PALETTES, ZONE_MAP } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 import { escapeAttr, formatTokens, formatDuration, hexToCss } from '../utils/formatting.js';
 

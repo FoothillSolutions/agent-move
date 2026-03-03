@@ -1,6 +1,6 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
-import { ZONES } from '@agentflow/shared';
-import type { ZoneConfig, ZoneId } from '@agentflow/shared';
+import { ZONES } from '@agent-move/shared';
+import type { ZoneConfig, ZoneId } from '@agent-move/shared';
 import { ZONE_DECORATORS } from './furniture.js';
 
 interface ZoneDisplay {

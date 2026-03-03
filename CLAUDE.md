@@ -12,20 +12,20 @@ npm run typecheck        # Full monorepo type check (tsc -b)
 
 Single-package commands:
 ```bash
-npm run dev -w @agentflow/server     # tsx watch (live reload)
-npm run dev -w @agentflow/client     # vite dev server
-npm run build -w @agentflow/shared   # tsc (types/constants only)
+npm run dev -w @agent-move/server     # tsx watch (live reload)
+npm run dev -w @agent-move/client     # vite dev server
+npm run build -w @agent-move/shared   # tsc (types/constants only)
 ```
 
 ## Architecture
 
 Three-package monorepo (npm workspaces) with strict TypeScript, ES modules throughout.
 
-**@agentflow/shared** — Zero-dependency types and constants consumed by both server and client. Key exports: `AgentState`, `ZoneId`, `ServerMessage`, `TOOL_ZONE_MAP`, `ZONES`, `AGENT_PALETTES`, `getZoneForTool()`.
+**@agent-move/shared** — Zero-dependency types and constants consumed by both server and client. Key exports: `AgentState`, `ZoneId`, `ServerMessage`, `TOOL_ZONE_MAP`, `ZONES`, `AGENT_PALETTES`, `getZoneForTool()`.
 
-**@agentflow/server** — Fastify backend that watches `~/.claude/projects/**/*.jsonl` via chokidar. Uses byte-offset tracking to read only new content from session files. Parses JSONL lines for `tool_use`, `text`, and `token_usage` blocks from assistant messages. Maintains agent state machine (`AgentStateManager`) with 30s idle timeout. Broadcasts state changes over WebSocket to all connected clients.
+**@agent-move/server** — Fastify backend that watches `~/.claude/projects/**/*.jsonl` via chokidar. Uses byte-offset tracking to read only new content from session files. Parses JSONL lines for `tool_use`, `text`, and `token_usage` blocks from assistant messages. Maintains agent state machine (`AgentStateManager`) with 30s idle timeout. Broadcasts state changes over WebSocket to all connected clients.
 
-**@agentflow/client** — Pixi.js v8 WebGL frontend. Connects to server via auto-reconnecting WebSocket. Renders 9 activity zones in a 3x3 grid (280px each). Agents are programmatic 16x16 pixel-art sprites rendered at 3x scale with idle/walk/working animations. `AgentManager` bridges the `StateStore` (event emitter) to `AgentSprite` instances, handling zone positioning, speech bubbles, particles, and relationship lines.
+**@agent-move/client** — Pixi.js v8 WebGL frontend. Connects to server via auto-reconnecting WebSocket. Renders 9 activity zones in a 3x3 grid (280px each). Agents are programmatic 16x16 pixel-art sprites rendered at 3x scale with idle/walk/working animations. `AgentManager` bridges the `StateStore` (event emitter) to `AgentSprite` instances, handling zone positioning, speech bubbles, particles, and relationship lines.
 
 ## Data Flow
 

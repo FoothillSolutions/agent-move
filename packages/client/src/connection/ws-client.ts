@@ -1,4 +1,4 @@
-import type { ServerMessage, ClientMessage } from '@agentflow/shared';
+import type { ServerMessage, ClientMessage } from '@agent-move/shared';
 import type { StateStore } from './state-store.js';
 
 const MIN_RECONNECT_MS = 1000;

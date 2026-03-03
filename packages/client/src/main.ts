@@ -17,7 +17,7 @@ import { ToastManager } from './ui/toast-manager.js';
 import { ShortcutsHelp } from './ui/shortcuts-help.js';
 import { SessionExport } from './ui/session-export.js';
 import { Onboarding } from './ui/onboarding.js';
-import { ZONE_MAP } from '@agentflow/shared';
+import { ZONE_MAP } from '@agent-move/shared';
 
 async function main() {
   const appEl = document.getElementById('app')!;

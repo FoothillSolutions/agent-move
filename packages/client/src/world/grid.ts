@@ -1,6 +1,6 @@
 import { Graphics } from 'pixi.js';
-import { WORLD_WIDTH, WORLD_HEIGHT, ZONES } from '@agentflow/shared';
-import type { ZoneConfig } from '@agentflow/shared';
+import { WORLD_WIDTH, WORLD_HEIGHT, ZONES } from '@agent-move/shared';
+import type { ZoneConfig } from '@agent-move/shared';
 
 const PX = 4;
 const P = (n: number) => n * PX;

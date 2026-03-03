@@ -1,6 +1,6 @@
 import { Application, Container } from 'pixi.js';
-import { WORLD_WIDTH, WORLD_HEIGHT, ZONE_MAP } from '@agentflow/shared';
-import type { ZoneId, ZoneConfig } from '@agentflow/shared';
+import { WORLD_WIDTH, WORLD_HEIGHT, ZONE_MAP } from '@agent-move/shared';
+import type { ZoneId, ZoneConfig } from '@agent-move/shared';
 import { createGrid } from './grid.js';
 import { ZoneRenderer } from './zone-renderer.js';
 import { Camera } from './camera.js';

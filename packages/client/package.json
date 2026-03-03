@@ -1,5 +1,5 @@
 {
-  "name": "@agentflow/client",
+  "name": "@agent-move/client",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@agentflow/shared": "*",
+    "@agent-move/shared": "*",
     "pixi.js": "^8.6.6"
   },
   "devDependencies": {

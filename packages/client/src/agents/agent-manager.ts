@@ -1,6 +1,6 @@
 import { Application } from 'pixi.js';
-import type { AgentState, ZoneId } from '@agentflow/shared';
-import { AGENT_PALETTES, ZONE_MAP } from '@agentflow/shared';
+import type { AgentState, ZoneId } from '@agent-move/shared';
+import { AGENT_PALETTES, ZONE_MAP } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 import type { WorldManager } from '../world/world-manager.js';
 import { AgentSprite, type SpeechMessage } from './agent-sprite.js';

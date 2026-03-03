@@ -1,10 +1,10 @@
 {
-  "name": "claude-agentflow",
+  "name": "agent-move",
   "version": "0.1.0",
-  "description": "Watch your Claude Code agents come alive as pixel-art characters in a 2D world",
+  "description": "Watch your AI coding agents come alive as pixel-art characters in a 2D world",
   "license": "MIT",
   "bin": {
-    "claude-agentflow": "bin/cli.js"
+    "agent-move": "bin/cli.js"
   },
   "files": [
     "bin/",
@@ -22,8 +22,8 @@
     "packages/client"
   ],
   "scripts": {
-    "dev": "concurrently -n server,client -c blue,green \"npm run dev -w @agentflow/server\" \"npm run dev -w @agentflow/client\"",
-    "build": "npm run build -w @agentflow/shared && npm run build -w @agentflow/server && npm run build -w @agentflow/client",
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev -w @agent-move/server\" \"npm run dev -w @agent-move/client\"",
+    "build": "npm run build -w @agent-move/shared && npm run build -w @agent-move/server && npm run build -w @agent-move/client",
     "typecheck": "tsc -b",
     "prepublishOnly": "npm run build"
   },

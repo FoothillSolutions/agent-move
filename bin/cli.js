@@ -11,8 +11,8 @@ const preferredPort = (() => {
   return 3333;
 })();
 
-process.env.AGENTFLOW_PORT = String(preferredPort);
-process.env.__AGENTFLOW_CLI = '1';
+process.env.AGENT_MOVE_PORT = String(preferredPort);
+process.env.__AGENT_MOVE_CLI = '1';
 
 async function run() {
   const { main } = await import('../packages/server/dist/index.js');
@@ -25,7 +25,7 @@ async function run() {
   console.log();
   console.log('  ┌──────────────────────────────────────┐');
   console.log('  │                                      │');
-  console.log(`  │   AgentFlow running on port ${String(port).padEnd(5)}   │`);
+  console.log(`  │   AgentMove running on port ${String(port).padEnd(5)}   │`);
   console.log(`  │   http://localhost:${String(port).padEnd(18)}│`);
   console.log('  │                                      │');
   console.log('  └──────────────────────────────────────┘');
@@ -41,6 +41,6 @@ async function run() {
 }
 
 run().catch((err) => {
-  console.error('Failed to start AgentFlow:', err);
+  console.error('Failed to start AgentMove:', err);
   process.exit(1);
 });
