@@ -4,3 +4,4 @@ dist/
 *.tsbuildinfo
 .playwright-mcp/
 COMPETITIVE_ANALYSIS.md
+.claude/settings.local.json
