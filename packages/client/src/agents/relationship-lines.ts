@@ -18,6 +18,7 @@ interface AgentPos {
   y: number;
   parentId: string | null;
   teamName: string | null;
+  rootSessionId: string;
   colorIndex: number;
 }
 
@@ -86,14 +87,16 @@ export class RelationshipLines {
       }
     }
 
-    // Draw team lines (connect agents in same team)
+    // Draw team lines (connect agents in same team within same session)
     const teams = new Map<string, AgentPos[]>();
     for (const [, agent] of agentList) {
       if (agent.teamName) {
-        let team = teams.get(agent.teamName);
+        // Scope by rootSessionId so teams from different terminal sessions don't connect
+        const key = `${agent.rootSessionId}:${agent.teamName}`;
+        let team = teams.get(key);
         if (!team) {
           team = [];
-          teams.set(agent.teamName, team);
+          teams.set(key, team);
         }
         team.push(agent);
       }

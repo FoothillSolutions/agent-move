@@ -5,6 +5,9 @@ export type AgentRole = 'main' | 'subagent' | 'team-lead' | 'team-member';
 export interface AgentState {
   id: string;
   sessionId: string;
+  /** Root session ID — the top-level main agent's sessionId in this hierarchy.
+   *  Used to scope all lookups so agents from different terminal sessions don't interact. */
+  rootSessionId: string;
   projectPath: string;
   projectName: string;
   /** Logical team agent name (e.g., "alice", "bob") — used to merge multiple sessions into one agent */

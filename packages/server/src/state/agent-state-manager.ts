@@ -22,15 +22,17 @@ export class AgentStateManager extends EventEmitter {
   private pendingSubagentTasks = new Map<string, string[]>();
   /** Queue of agent names from Agent tool calls, keyed by parent agent ID */
   private pendingSubagentNames = new Map<string, string[]>();
+  /** Queue of team names from Agent tool calls, keyed by parent agent ID */
+  private pendingSubagentTeams = new Map<string, string[]>();
   /** Maps sessionId → canonical agent ID (for merging multiple sessions into one agent) */
   private sessionToAgent = new Map<string, string>();
-  /** Maps projectDir:agentName → canonical agent ID */
+  /** Maps rootSessionId:agentName → canonical agent ID (scoped per terminal session) */
   private namedAgentMap = new Map<string, string>();
   /** Agents that are hidden pending identity confirmation — no events emitted */
   private hiddenAgents = new Set<string>();
   /** Timers to promote hidden agents after timeout */
   private identityTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  /** Queued recipient names from SendMessage calls: projectDir → [{sender, recipient}] */
+  /** Queued recipient names from SendMessage calls: rootSessionId → [{sender, recipient}] */
   private pendingRecipients = new Map<string, Array<{ sender: string; recipient: string }>>();
 
   getAll(): AgentState[] {
@@ -42,16 +44,18 @@ export class AgentStateManager extends EventEmitter {
     return this.agents.get(id);
   }
 
-  /** Flush pending name/task queues — call after initial replay to prevent stale matches */
+  /** Flush pending name/task/team queues — call after initial replay to prevent stale matches */
   flushPendingQueues(): void {
     const nameCount = Array.from(this.pendingSubagentNames.values()).reduce((n, q) => n + q.length, 0);
     const taskCount = Array.from(this.pendingSubagentTasks.values()).reduce((n, q) => n + q.length, 0);
+    const teamCount = Array.from(this.pendingSubagentTeams.values()).reduce((n, q) => n + q.length, 0);
     const recipientCount = Array.from(this.pendingRecipients.values()).reduce((n, q) => n + q.length, 0);
     this.pendingSubagentNames.clear();
     this.pendingSubagentTasks.clear();
+    this.pendingSubagentTeams.clear();
     this.pendingRecipients.clear();
-    if (nameCount + taskCount + recipientCount > 0) {
-      console.log(`Flushed ${nameCount} pending names, ${taskCount} pending tasks, ${recipientCount} pending recipients from replay`);
+    if (nameCount + taskCount + teamCount + recipientCount > 0) {
+      console.log(`Flushed ${nameCount} pending names, ${taskCount} pending tasks, ${teamCount} pending teams, ${recipientCount} pending recipients from replay`);
     }
   }
 
@@ -63,10 +67,10 @@ export class AgentStateManager extends EventEmitter {
     return this.timelineBuffer;
   }
 
-  /** Check if any named agents exist for a given project directory */
-  private hasNamedAgentsForProject(projectDir: string): boolean {
+  /** Check if any named agents exist for a given root session */
+  private hasNamedAgentsForRoot(rootSessionId: string): boolean {
     for (const key of this.namedAgentMap.keys()) {
-      if (key.startsWith(projectDir + ':')) return true;
+      if (key.startsWith(rootSessionId + ':')) return true;
     }
     return false;
   }
@@ -127,11 +131,28 @@ export class AgentStateManager extends EventEmitter {
   }
 
   /**
+   * Compute the rootSessionId for a new agent.
+   * - Main agents are their own root.
+   * - Subagents inherit from their parent (or fallback to parentId/own sessionId).
+   */
+  private computeRootSessionId(sessionId: string, parentId: string | null, sessionInfo: SessionInfo): string {
+    if (!sessionInfo.isSubagent) return sessionId;
+    if (parentId) {
+      const parent = this.agents.get(parentId);
+      return parent?.rootSessionId ?? parentId;
+    }
+    return sessionId; // orphan
+  }
+
+  /**
    * Merge a hidden agent into an existing named agent.
    * Returns the existing agent if merged, or null.
    */
-  private mergeIntoNamed(hiddenId: string, agentName: string, sessionInfo: SessionInfo): AgentState | null {
-    const key = `${sessionInfo.projectDir}:${agentName}`;
+  private mergeIntoNamed(hiddenId: string, agentName: string): AgentState | null {
+    const hidden = this.agents.get(hiddenId);
+    if (!hidden) return null;
+
+    const key = `${hidden.rootSessionId}:${agentName}`;
     const existingId = this.namedAgentMap.get(key);
 
     if (!existingId || existingId === hiddenId) return null;
@@ -139,27 +160,24 @@ export class AgentStateManager extends EventEmitter {
     const existing = this.agents.get(existingId);
     if (!existing) return null;
 
-    const hidden = this.agents.get(hiddenId);
-    if (hidden) {
-      // Transfer accumulated tokens
-      existing.totalInputTokens += hidden.totalInputTokens;
-      existing.totalOutputTokens += hidden.totalOutputTokens;
-      existing.cacheReadTokens += hidden.cacheReadTokens;
-      existing.cacheCreationTokens += hidden.cacheCreationTokens;
+    // Transfer accumulated tokens
+    existing.totalInputTokens += hidden.totalInputTokens;
+    existing.totalOutputTokens += hidden.totalOutputTokens;
+    existing.cacheReadTokens += hidden.cacheReadTokens;
+    existing.cacheCreationTokens += hidden.cacheCreationTokens;
 
-      // Remove hidden agent
-      this.agents.delete(hiddenId);
-      this.hiddenAgents.delete(hiddenId);
-      const timer = this.idleTimers.get(hiddenId);
-      if (timer) clearTimeout(timer);
-      this.idleTimers.delete(hiddenId);
-      const shutdownTimer = this.shutdownTimers.get(hiddenId);
-      if (shutdownTimer) clearTimeout(shutdownTimer);
-      this.shutdownTimers.delete(hiddenId);
-      const idTimer = this.identityTimers.get(hiddenId);
-      if (idTimer) clearTimeout(idTimer);
-      this.identityTimers.delete(hiddenId);
-    }
+    // Remove hidden agent
+    this.agents.delete(hiddenId);
+    this.hiddenAgents.delete(hiddenId);
+    const timer = this.idleTimers.get(hiddenId);
+    if (timer) clearTimeout(timer);
+    this.idleTimers.delete(hiddenId);
+    const shutdownTimer = this.shutdownTimers.get(hiddenId);
+    if (shutdownTimer) clearTimeout(shutdownTimer);
+    this.shutdownTimers.delete(hiddenId);
+    const idTimer = this.identityTimers.get(hiddenId);
+    if (idTimer) clearTimeout(idTimer);
+    this.identityTimers.delete(hiddenId);
 
     // Redirect future messages from this sessionId to the existing agent
     this.sessionToAgent.set(hiddenId, existingId);
@@ -197,6 +215,22 @@ export class AgentStateManager extends EventEmitter {
     this.emit('agent:update', updateEvent);
   }
 
+  /**
+   * Determine the role for a named subagent based on its parent.
+   * Only direct children of a team-lead become team-members.
+   * All others stay as subagents (even if they have a name).
+   */
+  private determineRoleForNamed(parentId: string | null, pendingTeam: string | null): AgentState['role'] {
+    // Explicit team assignment from Agent tool's team_name parameter
+    if (pendingTeam) return 'team-member';
+    if (!parentId) return 'subagent';
+    const parent = this.agents.get(parentId);
+    if (!parent) return 'subagent';
+    // Only direct children of team-lead become team-members
+    if (parent.role === 'team-lead' && parent.teamName) return 'team-member';
+    return 'subagent';
+  }
+
   processMessage(sessionId: string, activity: ParsedActivity, sessionInfo: SessionInfo) {
     // Check if this session has already been merged into another agent
     const canonicalId = this.resolveAgentId(sessionId);
@@ -219,21 +253,24 @@ export class AgentStateManager extends EventEmitter {
 
       // If no direct identity, try matching messageSender against queued recipients
       if (!discoveredName && activity.messageSender) {
-        discoveredName = this.popRecipientBySender(sessionInfo.projectDir, activity.messageSender);
+        discoveredName = this.popRecipientBySender(agent.rootSessionId, activity.messageSender);
       }
 
       if (discoveredName) {
         // Identity discovered! Try to merge into existing named agent
-        const merged = this.mergeIntoNamed(canonicalId, discoveredName, sessionInfo);
+        const merged = this.mergeIntoNamed(canonicalId, discoveredName);
         if (merged) {
           this.applyActivity(merged, activity, now, sessionInfo);
           return;
         }
         // No existing agent with this name — register and promote
         agent.agentName = discoveredName;
-        agent.role = 'team-member';
-        agent.teamName = agent.teamName || this.getParentTeamName(sessionInfo.projectDir);
-        this.namedAgentMap.set(`${sessionInfo.projectDir}:${discoveredName}`, canonicalId);
+        const role = this.determineRoleForNamed(agent.parentId, null);
+        agent.role = role;
+        agent.teamName = role === 'team-member'
+          ? (agent.teamName || this.getParentTeamName(agent.rootSessionId))
+          : null;
+        this.namedAgentMap.set(`${agent.rootSessionId}:${discoveredName}`, canonicalId);
         this.promoteAgent(canonicalId);
         this.applyActivity(agent, activity, now, sessionInfo);
         return;
@@ -245,7 +282,7 @@ export class AgentStateManager extends EventEmitter {
 
     // --- Handle identity discovery for already-visible agents ---
     if (agent && activity.agentName && !agent.agentName) {
-      const key = `${sessionInfo.projectDir}:${activity.agentName}`;
+      const key = `${agent.rootSessionId}:${activity.agentName}`;
       const existingId = this.namedAgentMap.get(key);
       if (existingId && existingId !== canonicalId) {
         // There's already a different agent with this name — merge into it
@@ -287,8 +324,11 @@ export class AgentStateManager extends EventEmitter {
       }
       // No conflict — just register the name
       agent.agentName = activity.agentName;
-      agent.role = 'team-member';
-      agent.teamName = agent.teamName || this.getParentTeamName(sessionInfo.projectDir);
+      const role = this.determineRoleForNamed(agent.parentId, null);
+      agent.role = role;
+      agent.teamName = role === 'team-member'
+        ? (agent.teamName || this.getParentTeamName(agent.rootSessionId))
+        : agent.teamName;
       this.namedAgentMap.set(key, canonicalId);
       console.log(`Agent ${canonicalId.slice(0, 12)}… identified as "${activity.agentName}"`);
     }
@@ -301,16 +341,22 @@ export class AgentStateManager extends EventEmitter {
             ? this.resolveAgentId(sessionInfo.parentSessionId)
             : this.findParentId(sessionInfo.projectDir))
         : null;
+
+      // Compute rootSessionId (scopes all lookups to this terminal session)
+      const rootSessionId = this.computeRootSessionId(sessionId, parentId, sessionInfo);
+
       const taskDescription = parentId ? this.popPendingTask(parentId) : null;
+      const pendingTeam = parentId ? this.popPendingTeam(parentId) : null;
+
       // Try multiple sources for agent name: pending queue, routing sender, message recipient matching
       let agentName = (parentId ? this.popPendingName(parentId) : null) ?? activity.agentName ?? null;
       if (!agentName && activity.messageSender) {
-        agentName = this.popRecipientBySender(sessionInfo.projectDir, activity.messageSender);
+        agentName = this.popRecipientBySender(rootSessionId, activity.messageSender);
       }
 
-      // If we have a name and it matches an existing agent, merge immediately
+      // If we have a name and it matches an existing agent in the same session, merge immediately
       if (agentName) {
-        const key = `${sessionInfo.projectDir}:${agentName}`;
+        const key = `${rootSessionId}:${agentName}`;
         const existingId = this.namedAgentMap.get(key);
         if (existingId) {
           const existing = this.agents.get(existingId);
@@ -326,16 +372,25 @@ export class AgentStateManager extends EventEmitter {
         }
       }
 
+      // Determine role based on parent and team context
+      const role = agentName
+        ? this.determineRoleForNamed(parentId, pendingTeam)
+        : this.determineRole(activity, sessionInfo);
+      const teamName = role === 'team-member'
+        ? (pendingTeam || this.getParentTeamName(rootSessionId))
+        : null;
+
       // Create the agent
       agent = {
         id: sessionId,
         sessionId,
+        rootSessionId,
         projectPath: sessionInfo.projectPath,
         projectName: sessionInfo.projectName,
         agentName,
-        role: agentName ? 'team-member' : this.determineRole(activity, sessionInfo),
+        role,
         parentId,
-        teamName: agentName ? this.getParentTeamName(sessionInfo.projectDir) : null,
+        teamName,
         currentZone: 'spawn',
         currentTool: null,
         currentActivity: null,
@@ -360,7 +415,7 @@ export class AgentStateManager extends EventEmitter {
       // Decide whether to hide or show immediately
       const shouldHide = sessionInfo.isSubagent
         && !agentName
-        && this.hasNamedAgentsForProject(sessionInfo.projectDir);
+        && this.hasNamedAgentsForRoot(rootSessionId);
 
       if (shouldHide) {
         // Hide this agent — don't emit spawn until we know who it is
@@ -389,9 +444,9 @@ export class AgentStateManager extends EventEmitter {
         return;
       }
 
-      // Register named agent
+      // Register named agent (scoped to root session)
       if (agentName) {
-        this.namedAgentMap.set(`${sessionInfo.projectDir}:${agentName}`, sessionId);
+        this.namedAgentMap.set(`${rootSessionId}:${agentName}`, sessionId);
       }
 
       // Visible spawn
@@ -453,7 +508,7 @@ export class AgentStateManager extends EventEmitter {
           if (!agent.agentName) {
             agent.agentName = 'team-lead';
           }
-          this.namedAgentMap.set(`${agent.projectPath}:team-lead`, agentId);
+          this.namedAgentMap.set(`${agent.rootSessionId}:team-lead`, agentId);
         }
         if (activity.toolName === 'SendMessage') {
           agent.currentZone = 'messaging';
@@ -463,16 +518,17 @@ export class AgentStateManager extends EventEmitter {
             // Set messageTarget for client-side flow visualization
             agent.messageTarget = recipient ?? null;
             // Queue recipient name so the incoming session can be identified
+            // Scoped to rootSessionId so cross-session messages don't collide
             const senderIdentity = agent.agentName || (agent.role === 'team-lead' ? 'team-lead' : null);
             if (recipient && senderIdentity) {
-              this.queueRecipient(agent.projectPath, senderIdentity, recipient);
+              this.queueRecipient(agent.rootSessionId, senderIdentity, recipient);
             }
           }
         } else {
           agent.messageTarget = null;
         }
 
-        // Queue name + description for incoming subagent
+        // Queue name + description + team for incoming subagent
         if (activity.toolName === 'Agent' && activity.toolInput) {
           const input = activity.toolInput as Record<string, unknown>;
           const desc = (input.description ?? input.prompt ?? '') as string;
@@ -482,6 +538,11 @@ export class AgentStateManager extends EventEmitter {
           const name = input.name as string | undefined;
           if (name) {
             this.queuePendingName(agentId, name);
+          }
+          // Capture team_name from Agent tool to identify team members
+          const teamName = input.team_name as string | undefined;
+          if (teamName) {
+            this.queuePendingTeam(agentId, teamName);
           }
         }
 
@@ -534,10 +595,10 @@ export class AgentStateManager extends EventEmitter {
     }
   }
 
-  /** Inherit teamName from parent agent (for team members) */
-  private getParentTeamName(projectDir: string): string | null {
+  /** Inherit teamName from parent agent in the same session hierarchy */
+  private getParentTeamName(rootSessionId: string): string | null {
     for (const agent of this.agents.values()) {
-      if (agent.projectPath === projectDir && agent.teamName) {
+      if (agent.rootSessionId === rootSessionId && agent.teamName) {
         return agent.teamName;
       }
     }
@@ -595,17 +656,29 @@ export class AgentStateManager extends EventEmitter {
     return queue.shift()!;
   }
 
-  private queueRecipient(projectDir: string, sender: string, recipient: string): void {
-    let queue = this.pendingRecipients.get(projectDir);
-    if (!queue) { queue = []; this.pendingRecipients.set(projectDir, queue); }
+  private queuePendingTeam(parentId: string, teamName: string): void {
+    let queue = this.pendingSubagentTeams.get(parentId);
+    if (!queue) { queue = []; this.pendingSubagentTeams.set(parentId, queue); }
+    queue.push(teamName);
+  }
+
+  private popPendingTeam(parentId: string): string | null {
+    const queue = this.pendingSubagentTeams.get(parentId);
+    if (!queue || queue.length === 0) return null;
+    return queue.shift()!;
+  }
+
+  private queueRecipient(rootSessionId: string, sender: string, recipient: string): void {
+    let queue = this.pendingRecipients.get(rootSessionId);
+    if (!queue) { queue = []; this.pendingRecipients.set(rootSessionId, queue); }
     queue.push({ sender, recipient });
     // Keep queue bounded
     if (queue.length > 50) queue.shift();
   }
 
   /** Pop a queued recipient name matching a specific sender */
-  private popRecipientBySender(projectDir: string, sender: string): string | null {
-    const queue = this.pendingRecipients.get(projectDir);
+  private popRecipientBySender(rootSessionId: string, sender: string): string | null {
+    const queue = this.pendingRecipients.get(rootSessionId);
     if (!queue) return null;
     const idx = queue.findIndex(e => e.sender === sender);
     if (idx === -1) return null;
@@ -667,16 +740,24 @@ export class AgentStateManager extends EventEmitter {
 
   removeDone(): string[] {
     const removed: string[] = [];
-    for (const [id, agent] of this.agents) {
-      if (agent.isDone) {
+    const doneIds = [...this.agents.entries()]
+      .filter(([, a]) => a.isDone)
+      .map(([id]) => id);
+    for (const id of doneIds) {
+      if (this.agents.has(id)) {
         removed.push(id);
-        this.shutdown(id);
+        this.shutdown(id); // shutdown cascades to children
       }
     }
     return removed;
   }
 
   shutdown(sessionId: string) {
+    // Cascade: collect all child agents before removing this one
+    const childIds = [...this.agents.entries()]
+      .filter(([id, a]) => a.parentId === sessionId && id !== sessionId)
+      .map(([id]) => id);
+
     const timer = this.idleTimers.get(sessionId);
     if (timer) clearTimeout(timer);
     this.idleTimers.delete(sessionId);
@@ -695,7 +776,7 @@ export class AgentStateManager extends EventEmitter {
 
     const agent = this.agents.get(sessionId);
     if (agent?.agentName) {
-      const key = `${agent.projectPath}:${agent.agentName}`;
+      const key = `${agent.rootSessionId}:${agent.agentName}`;
       if (this.namedAgentMap.get(key) === sessionId) {
         this.namedAgentMap.delete(key);
       }
@@ -716,5 +797,13 @@ export class AgentStateManager extends EventEmitter {
     } satisfies AgentEvent;
     this.recordTimeline(shutdownEvent);
     this.emit('agent:shutdown', shutdownEvent);
+
+    // Recursively shutdown all children
+    for (const childId of childIds) {
+      if (this.agents.has(childId)) {
+        console.log(`Cascading shutdown: child ${childId.slice(0, 12)}… (parent ${sessionId.slice(0, 12)}… removed)`);
+        this.shutdown(childId);
+      }
+    }
   }
 }

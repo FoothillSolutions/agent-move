@@ -231,10 +231,11 @@ export class AgentManager {
       if (agent.currentTool === 'SendMessage') {
         let targetAgent: { sprite: { container: { x: number; y: number } } } | undefined;
 
-        // First: try to find target by messageTarget name (peer-to-peer)
+        // First: try to find target by messageTarget name within same session (peer-to-peer)
         if (agent.messageTarget) {
           for (const [, other] of this.agents) {
-            if (other.state.agentName === agent.messageTarget || other.state.id === agent.messageTarget) {
+            if ((other.state.agentName === agent.messageTarget || other.state.id === agent.messageTarget)
+                && other.state.rootSessionId === agent.rootSessionId) {
               targetAgent = other;
               break;
             }
@@ -398,13 +399,14 @@ export class AgentManager {
     this.messageFlow.update(deltaMs);
 
     // Update relationship lines
-    const lineData = new Map<string, { x: number; y: number; parentId: string | null; teamName: string | null; colorIndex: number }>();
+    const lineData = new Map<string, { x: number; y: number; parentId: string | null; teamName: string | null; rootSessionId: string; colorIndex: number }>();
     for (const [id, managed] of this.agents) {
       lineData.set(id, {
         x: managed.sprite.container.x,
         y: managed.sprite.container.y,
         parentId: managed.state.parentId,
         teamName: managed.state.teamName,
+        rootSessionId: managed.state.rootSessionId,
         colorIndex: managed.state.colorIndex,
       });
     }

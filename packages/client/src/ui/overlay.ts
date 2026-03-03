@@ -228,13 +228,14 @@ export class Overlay {
       }
     }
 
-    // Group non-subagents by teamName
+    // Group non-subagents by rootSessionId:teamName (prevents cross-session grouping)
     const teamGroups = new Map<string, AgentState[]>();
     const standalone: AgentState[] = [];
     for (const agent of nonSubAgents) {
       if (agent.teamName) {
-        let list = teamGroups.get(agent.teamName);
-        if (!list) { list = []; teamGroups.set(agent.teamName, list); }
+        const groupKey = `${agent.rootSessionId}:${agent.teamName}`;
+        let list = teamGroups.get(groupKey);
+        if (!list) { list = []; teamGroups.set(groupKey, list); }
         list.push(agent);
       } else {
         standalone.push(agent);
@@ -244,7 +245,12 @@ export class Overlay {
     let html = '';
 
     // Render team groups
-    for (const [teamName, members] of teamGroups) {
+    for (const [groupKey, members] of teamGroups) {
+      // Extract display name (strip rootSessionId prefix)
+      const colonIdx = groupKey.indexOf(':');
+      const teamName = colonIdx >= 0 ? groupKey.slice(colonIdx + 1) : groupKey;
+      const rootId = members[0]?.rootSessionId;
+
       // Sort: lead first, then by spawn time
       members.sort((a, b) => {
         if (a.role === 'team-lead' && b.role !== 'team-lead') return -1;
@@ -252,13 +258,13 @@ export class Overlay {
         return 0;
       });
 
-      // Count total team members from full state
+      // Count total team members from full state (scoped to same session)
       let totalTeamCount = 0;
       for (const a of allAgentsMap.values()) {
-        if (a.teamName === teamName) totalTeamCount++;
+        if (a.teamName === teamName && a.rootSessionId === rootId) totalTeamCount++;
       }
 
-      const groupId = `team:${teamName}`;
+      const groupId = `team:${groupKey}`;
       const isCollapsed = this.collapsedGroups.has(groupId);
 
       html += `<div class="agent-group${isCollapsed ? ' collapsed' : ''}">`;
