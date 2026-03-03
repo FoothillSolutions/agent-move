@@ -180,30 +180,30 @@ function drawTileFloor(g: Graphics, x: number, y: number, w: number, h: number):
   }
 }
 
-function drawCarpetFloor(g: Graphics, x: number, y: number, w: number, h: number): void {
-  px(g, x, y, w, h, C.carpet);
+function drawDottedCarpet(
+  g: Graphics, x: number, y: number, w: number, h: number,
+  base: number, dot: number, edge: number, allEdges = true,
+): void {
+  px(g, x, y, w, h, base);
   for (let py = 0; py < h; py += P(2)) {
     for (let pxx = ((py / P(2)) % 2) * P(2); pxx < w; pxx += P(4)) {
-      px(g, x + pxx, y + py, P(1), P(1), C.carpetDot);
+      px(g, x + pxx, y + py, P(1), P(1), dot);
     }
   }
-  px(g, x, y, w, P(1), C.carpetEdge);
-  px(g, x, y + h - P(1), w, P(1), C.carpetEdge);
-  px(g, x, y, P(1), h, C.carpetEdge);
-  px(g, x + w - P(1), y, P(1), h, C.carpetEdge);
+  px(g, x, y, w, P(1), edge);
+  px(g, x, y + h - P(1), w, P(1), edge);
+  if (allEdges) {
+    px(g, x, y, P(1), h, edge);
+    px(g, x + w - P(1), y, P(1), h, edge);
+  }
+}
+
+function drawCarpetFloor(g: Graphics, x: number, y: number, w: number, h: number): void {
+  drawDottedCarpet(g, x, y, w, h, C.carpet, C.carpetDot, C.carpetEdge);
 }
 
 function drawWarmCarpet(g: Graphics, x: number, y: number, w: number, h: number): void {
-  px(g, x, y, w, h, C.carpetWarm);
-  for (let py = 0; py < h; py += P(2)) {
-    for (let pxx = ((py / P(2)) % 2) * P(2); pxx < w; pxx += P(4)) {
-      px(g, x + pxx, y + py, P(1), P(1), C.carpetWarmDot);
-    }
-  }
-  px(g, x, y, w, P(1), C.carpetWarmAlt);
-  px(g, x, y + h - P(1), w, P(1), C.carpetWarmAlt);
-  px(g, x, y, P(1), h, C.carpetWarmAlt);
-  px(g, x + w - P(1), y, P(1), h, C.carpetWarmAlt);
+  drawDottedCarpet(g, x, y, w, h, C.carpetWarm, C.carpetWarmDot, C.carpetWarmAlt);
 }
 
 function drawDarkFloor(g: Graphics, x: number, y: number, w: number, h: number): void {
@@ -213,14 +213,7 @@ function drawDarkFloor(g: Graphics, x: number, y: number, w: number, h: number):
 }
 
 function drawGreenCarpet(g: Graphics, x: number, y: number, w: number, h: number): void {
-  px(g, x, y, w, h, C.greenFloor);
-  for (let py = 0; py < h; py += P(2)) {
-    for (let pxx = ((py / P(2)) % 2) * P(2); pxx < w; pxx += P(4)) {
-      px(g, x + pxx, y + py, P(1), P(1), C.greenFloorDot);
-    }
-  }
-  px(g, x, y, w, P(1), C.greenFloorAlt);
-  px(g, x, y + h - P(1), w, P(1), C.greenFloorAlt);
+  drawDottedCarpet(g, x, y, w, h, C.greenFloor, C.greenFloorDot, C.greenFloorAlt, false);
 }
 
 // ── Furniture Pieces ────────────────────────────────────────

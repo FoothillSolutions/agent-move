@@ -144,6 +144,24 @@ export class AgentStateManager extends EventEmitter {
     return sessionId; // orphan
   }
 
+  /** Transfer token counts from source agent to target and remove the source. */
+  private transferAndRemove(sourceId: string, target: AgentState, redirectSessionId: string): void {
+    const source = this.agents.get(sourceId);
+    if (source) {
+      target.totalInputTokens += source.totalInputTokens;
+      target.totalOutputTokens += source.totalOutputTokens;
+      target.cacheReadTokens += source.cacheReadTokens;
+      target.cacheCreationTokens += source.cacheCreationTokens;
+    }
+    this.agents.delete(sourceId);
+    this.hiddenAgents.delete(sourceId);
+    this.clearTimers(sourceId);
+    this.sessionToAgent.set(redirectSessionId, target.id);
+    target.isIdle = false;
+    target.isDone = false;
+    target.lastActivityAt = Date.now();
+  }
+
   /**
    * Merge a hidden agent into an existing named agent.
    * Returns the existing agent if merged, or null.
@@ -160,32 +178,7 @@ export class AgentStateManager extends EventEmitter {
     const existing = this.agents.get(existingId);
     if (!existing) return null;
 
-    // Transfer accumulated tokens
-    existing.totalInputTokens += hidden.totalInputTokens;
-    existing.totalOutputTokens += hidden.totalOutputTokens;
-    existing.cacheReadTokens += hidden.cacheReadTokens;
-    existing.cacheCreationTokens += hidden.cacheCreationTokens;
-
-    // Remove hidden agent
-    this.agents.delete(hiddenId);
-    this.hiddenAgents.delete(hiddenId);
-    const timer = this.idleTimers.get(hiddenId);
-    if (timer) clearTimeout(timer);
-    this.idleTimers.delete(hiddenId);
-    const shutdownTimer = this.shutdownTimers.get(hiddenId);
-    if (shutdownTimer) clearTimeout(shutdownTimer);
-    this.shutdownTimers.delete(hiddenId);
-    const idTimer = this.identityTimers.get(hiddenId);
-    if (idTimer) clearTimeout(idTimer);
-    this.identityTimers.delete(hiddenId);
-
-    // Redirect future messages from this sessionId to the existing agent
-    this.sessionToAgent.set(hiddenId, existingId);
-
-    // Wake up the existing agent
-    existing.isIdle = false;
-    existing.isDone = false;
-    existing.lastActivityAt = Date.now();
+    this.transferAndRemove(hiddenId, existing, hiddenId);
 
     console.log(`Merged session ${hiddenId.slice(0, 12)}… into agent "${agentName}" (${existingId.slice(0, 12)}…)`);
     return existing;
@@ -284,23 +277,7 @@ export class AgentStateManager extends EventEmitter {
         // There's already a different agent with this name — merge into it
         const existing = this.agents.get(existingId);
         if (existing) {
-          // Transfer tokens
-          existing.totalInputTokens += agent.totalInputTokens;
-          existing.totalOutputTokens += agent.totalOutputTokens;
-          existing.cacheReadTokens += agent.cacheReadTokens;
-          existing.cacheCreationTokens += agent.cacheCreationTokens;
-
-          // Remove this agent
-          this.agents.delete(canonicalId);
-          const t1 = this.idleTimers.get(canonicalId);
-          if (t1) clearTimeout(t1);
-          this.idleTimers.delete(canonicalId);
-          const t2 = this.shutdownTimers.get(canonicalId);
-          if (t2) clearTimeout(t2);
-          this.shutdownTimers.delete(canonicalId);
-
-          // Redirect
-          this.sessionToAgent.set(sessionId, existingId);
+          this.transferAndRemove(canonicalId, existing, sessionId);
 
           // Shutdown the duplicate sprite on clients
           this.emit('agent:shutdown', {
@@ -309,10 +286,6 @@ export class AgentStateManager extends EventEmitter {
             timestamp: now,
           } satisfies AgentEvent);
 
-          // Wake up existing
-          existing.isIdle = false;
-          existing.isDone = false;
-          existing.lastActivityAt = now;
           console.log(`Late-merged agent ${canonicalId.slice(0, 12)}… into "${activity.agentName}" (${existingId.slice(0, 12)}…)`);
           this.applyActivity(existing, activity, now, sessionInfo);
           return;
@@ -424,13 +397,7 @@ export class AgentStateManager extends EventEmitter {
             console.log(`Identity timeout for ${sessionId.slice(0, 12)}… — discarding (unidentified)`);
             this.hiddenAgents.delete(sessionId);
             this.agents.delete(sessionId);
-            this.identityTimers.delete(sessionId);
-            const idleT = this.idleTimers.get(sessionId);
-            if (idleT) clearTimeout(idleT);
-            this.idleTimers.delete(sessionId);
-            const shutT = this.shutdownTimers.get(sessionId);
-            if (shutT) clearTimeout(shutT);
-            this.shutdownTimers.delete(sessionId);
+            this.clearTimers(sessionId);
           }
         }, IDENTITY_TIMEOUT_MS);
         this.identityTimers.set(sessionId, timer);
@@ -628,40 +595,40 @@ export class AgentStateManager extends EventEmitter {
     return null;
   }
 
+  private enqueue(map: Map<string, string[]>, key: string, value: string): void {
+    let queue = map.get(key);
+    if (!queue) { queue = []; map.set(key, queue); }
+    queue.push(value);
+  }
+
+  private dequeue(map: Map<string, string[]>, key: string): string | null {
+    const queue = map.get(key);
+    if (!queue || queue.length === 0) return null;
+    return queue.shift()!;
+  }
+
   private queuePendingTask(parentId: string, description: string): void {
-    let queue = this.pendingSubagentTasks.get(parentId);
-    if (!queue) { queue = []; this.pendingSubagentTasks.set(parentId, queue); }
-    queue.push(description);
+    this.enqueue(this.pendingSubagentTasks, parentId, description);
   }
 
   private popPendingTask(parentId: string): string | null {
-    const queue = this.pendingSubagentTasks.get(parentId);
-    if (!queue || queue.length === 0) return null;
-    return queue.shift()!;
+    return this.dequeue(this.pendingSubagentTasks, parentId);
   }
 
   private queuePendingName(parentId: string, name: string): void {
-    let queue = this.pendingSubagentNames.get(parentId);
-    if (!queue) { queue = []; this.pendingSubagentNames.set(parentId, queue); }
-    queue.push(name);
+    this.enqueue(this.pendingSubagentNames, parentId, name);
   }
 
   private popPendingName(parentId: string): string | null {
-    const queue = this.pendingSubagentNames.get(parentId);
-    if (!queue || queue.length === 0) return null;
-    return queue.shift()!;
+    return this.dequeue(this.pendingSubagentNames, parentId);
   }
 
   private queuePendingTeam(parentId: string, teamName: string): void {
-    let queue = this.pendingSubagentTeams.get(parentId);
-    if (!queue) { queue = []; this.pendingSubagentTeams.set(parentId, queue); }
-    queue.push(teamName);
+    this.enqueue(this.pendingSubagentTeams, parentId, teamName);
   }
 
   private popPendingTeam(parentId: string): string | null {
-    const queue = this.pendingSubagentTeams.get(parentId);
-    if (!queue || queue.length === 0) return null;
-    return queue.shift()!;
+    return this.dequeue(this.pendingSubagentTeams, parentId);
   }
 
   private queueRecipient(rootSessionId: string, sender: string, recipient: string): void {
@@ -680,6 +647,18 @@ export class AgentStateManager extends EventEmitter {
     if (idx === -1) return null;
     const entry = queue.splice(idx, 1)[0];
     return entry.recipient;
+  }
+
+  private clearTimers(agentId: string): void {
+    const idle = this.idleTimers.get(agentId);
+    if (idle) clearTimeout(idle);
+    this.idleTimers.delete(agentId);
+    const shutdown = this.shutdownTimers.get(agentId);
+    if (shutdown) clearTimeout(shutdown);
+    this.shutdownTimers.delete(agentId);
+    const identity = this.identityTimers.get(agentId);
+    if (identity) clearTimeout(identity);
+    this.identityTimers.delete(agentId);
   }
 
   private resetIdleTimer(agentId: string) {
@@ -754,17 +733,7 @@ export class AgentStateManager extends EventEmitter {
       .filter(([id, a]) => a.parentId === sessionId && id !== sessionId)
       .map(([id]) => id);
 
-    const timer = this.idleTimers.get(sessionId);
-    if (timer) clearTimeout(timer);
-    this.idleTimers.delete(sessionId);
-
-    const shutdownTimer = this.shutdownTimers.get(sessionId);
-    if (shutdownTimer) clearTimeout(shutdownTimer);
-    this.shutdownTimers.delete(sessionId);
-
-    const idTimer = this.identityTimers.get(sessionId);
-    if (idTimer) clearTimeout(idTimer);
-    this.identityTimers.delete(sessionId);
+    this.clearTimers(sessionId);
     this.hiddenAgents.delete(sessionId);
 
     const ts = Date.now();
