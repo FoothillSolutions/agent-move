@@ -1,3 +1,4 @@
+import type { AgentState } from '@agent-move/shared';
 import { AGENT_PALETTES } from '@agent-move/shared';
 import { storageGet, storageSet } from '../utils/storage.js';
 
@@ -13,11 +14,9 @@ const STORAGE_KEY = 'agent-customizations';
 export class AgentCustomizer {
   private el: HTMLElement;
   private customizations: CustomizationMap;
-  /** The stable key (agent name) used for localStorage persistence */
-  private currentStableKey: string | null = null;
-  /** The live agentId for applying changes to the running agent */
-  private currentAgentId: string | null = null;
-  private onChange: ((agentId: string, stableKey: string, data: CustomizationData) => void) | null = null;
+  /** The agent currently being edited */
+  private currentAgent: AgentState | null = null;
+  private onChange: ((agentId: string, data: CustomizationData) => void) | null = null;
 
   constructor() {
     this.customizations = storageGet<CustomizationMap>(STORAGE_KEY, {});
@@ -64,25 +63,44 @@ export class AgentCustomizer {
     this.el.querySelector('.ac-reset')!.addEventListener('click', () => this.reset());
   }
 
-  setChangeHandler(handler: (agentId: string, stableKey: string, data: CustomizationData) => void): void {
+  setChangeHandler(handler: (agentId: string, data: CustomizationData) => void): void {
     this.onChange = handler;
   }
 
-  /** Look up saved customization by stable agent name */
-  getCustomization(stableKey: string): CustomizationData | undefined {
-    return this.customizations[stableKey];
+  /** Get the default display name for an agent (before customization) */
+  private getDefaultName(agent: AgentState): string {
+    return agent.agentName || agent.projectName || agent.id.slice(0, 8);
+  }
+
+  /** Get display name for an agent, respecting customizations keyed by sessionId */
+  getDisplayName(agent: AgentState): string {
+    const custom = this.customizations[agent.id];
+    return custom?.displayName || this.getDefaultName(agent);
+  }
+
+  /** Get effective color index for an agent, respecting customizations keyed by sessionId */
+  getDisplayColorIndex(agent: AgentState): number {
+    const custom = this.customizations[agent.id];
+    return custom?.colorIndex ?? agent.colorIndex;
+  }
+
+  /** Convenience: get both display name and color index */
+  getCustomDisplay(agent: AgentState): { displayName: string; colorIndex: number } {
+    return {
+      displayName: this.getDisplayName(agent),
+      colorIndex: this.getDisplayColorIndex(agent),
+    };
   }
 
   /**
    * Open the customizer for an agent.
-   * @param agentId - live session id (for applying changes)
-   * @param stableKey - agent name used as persistent key (agentName or projectName)
+   * @param agent - full agent state (sessionId used as persistent key)
    */
-  open(agentId: string, stableKey: string): void {
-    this.currentAgentId = agentId;
-    this.currentStableKey = stableKey;
-    const data = this.customizations[stableKey];
-    (this.el.querySelector('.ac-name-input') as HTMLInputElement).value = data?.displayName ?? stableKey;
+  open(agent: AgentState): void {
+    this.currentAgent = agent;
+    const data = this.customizations[agent.id];
+    const defaultName = this.getDefaultName(agent);
+    (this.el.querySelector('.ac-name-input') as HTMLInputElement).value = data?.displayName ?? defaultName;
 
     const selectedIdx = data?.colorIndex ?? -1;
     this.el.querySelectorAll('.ac-swatch').forEach(s => {
@@ -94,12 +112,11 @@ export class AgentCustomizer {
 
   close(): void {
     this.el.classList.remove('open');
-    this.currentAgentId = null;
-    this.currentStableKey = null;
+    this.currentAgent = null;
   }
 
   private save(): void {
-    if (!this.currentAgentId || !this.currentStableKey) return;
+    if (!this.currentAgent) return;
     const name = (this.el.querySelector('.ac-name-input') as HTMLInputElement).value.trim();
     const selectedSwatch = this.el.querySelector('.ac-swatch.selected') as HTMLElement | null;
     const colorIndex = selectedSwatch ? parseInt(selectedSwatch.dataset.index!, 10) : undefined;
@@ -108,17 +125,17 @@ export class AgentCustomizer {
     if (name) data.displayName = name;
     if (colorIndex !== undefined) data.colorIndex = colorIndex;
 
-    this.customizations[this.currentStableKey] = data;
+    this.customizations[this.currentAgent.id] = data;
     storageSet(STORAGE_KEY, this.customizations);
-    this.onChange?.(this.currentAgentId, this.currentStableKey, data);
+    this.onChange?.(this.currentAgent.id, data);
     this.close();
   }
 
   private reset(): void {
-    if (!this.currentAgentId || !this.currentStableKey) return;
-    delete this.customizations[this.currentStableKey];
+    if (!this.currentAgent) return;
+    delete this.customizations[this.currentAgent.id];
     storageSet(STORAGE_KEY, this.customizations);
-    this.onChange?.(this.currentAgentId, this.currentStableKey, {});
+    this.onChange?.(this.currentAgent.id, {});
     this.close();
   }
 

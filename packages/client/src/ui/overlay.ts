@@ -17,11 +17,11 @@ export class Overlay {
   private filterEl: HTMLElement;
   private refreshTimer: ReturnType<typeof setInterval>;
   private onAgentClick: ((agentId: string) => void) | null = null;
-  private _customizationLookup: ((stableKey: string) => { displayName?: string; colorIndex?: number } | undefined) | null = null;
+  private _customizationLookup: ((agent: AgentState) => { displayName: string; colorIndex: number }) | null = null;
   private currentFilter: FilterMode = 'all';
   private collapsedGroups = new Set<string>();
   private renderPending = false;
-  private scheduleRender: () => void;
+  scheduleRender: () => void;
 
   // Sparkline data: per-agent rolling token history (sampled every 2s, last 30 samples = 1min)
   private tokenHistory = new Map<string, TokenHistory>();
@@ -31,7 +31,7 @@ export class Overlay {
     this.onAgentClick = handler;
   }
 
-  setCustomizationLookup(lookup: (stableKey: string) => { displayName?: string; colorIndex?: number } | undefined): void {
+  setCustomizationLookup(lookup: (agent: AgentState) => { displayName: string; colorIndex: number }): void {
     this._customizationLookup = lookup;
   }
 
@@ -388,15 +388,15 @@ export class Overlay {
   }
 
   private renderCard(agent: AgentState, isChild = false, subCount = 0): string {
-    const stableKey = agent.agentName || agent.projectName || this.shortenId(agent.sessionId);
-    const customization = this._customizationLookup?.(stableKey);
-    const palette = AGENT_PALETTES[(customization?.colorIndex ?? agent.colorIndex) % AGENT_PALETTES.length];
+    const custom = this._customizationLookup?.(agent);
+    const colorIndex = custom?.colorIndex ?? agent.colorIndex;
+    const palette = AGENT_PALETTES[colorIndex % AGENT_PALETTES.length];
     const borderColor = hexToCss(palette.body);
     const zone = ZONE_MAP.get(agent.currentZone);
     const zoneName = zone ? zone.label : agent.currentZone;
     const toolText = agent.currentTool ?? 'none';
     const tokens = formatTokenPair(agent.totalInputTokens, agent.totalOutputTokens);
-    const name = customization?.displayName || stableKey;
+    const name = custom?.displayName || agent.agentName || agent.projectName || this.shortenId(agent.sessionId);
     const opacity = agent.isDone ? '0.4' : agent.isIdle ? '0.6' : '1';
     const childClass = isChild ? ' agent-card-child' : '';
     const doneClass = agent.isDone ? ' agent-card-done' : '';

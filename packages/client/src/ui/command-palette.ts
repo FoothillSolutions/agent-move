@@ -29,6 +29,12 @@ export class CommandPalette {
   private filteredActions: CommandAction[] = [];
   private selectedIndex = 0;
   private onCommand: CommandCallback;
+  private _customizationLookup: ((agent: AgentState) => { displayName: string; colorIndex: number }) | null = null;
+
+  /** Set a lookup function to resolve customized display name + color from agent state */
+  setCustomizationLookup(lookup: (agent: AgentState) => { displayName: string; colorIndex: number }): void {
+    this._customizationLookup = lookup;
+  }
 
   // Bound event handler (stored for cleanup)
   private globalKeydownHandler = (e: KeyboardEvent) => {
@@ -232,14 +238,18 @@ export class CommandPalette {
   /** Dynamically add agent-specific actions */
   private getAgentActions(): CommandAction[] {
     const agents = Array.from(this.store.getAgents().values());
-    return agents.map((agent) => ({
-      id: `agent:${agent.id}`,
-      label: `Focus: ${agent.agentName || agent.projectName || agent.sessionId.slice(0, 10)}`,
-      description: `${agent.isIdle ? 'Idle' : 'Active'} in ${ZONE_MAP.get(agent.currentZone)?.label ?? agent.currentZone}`,
-      icon: agent.isIdle ? '💤' : '🤖',
-      category: 'agent' as const,
-      action: () => this.onCommand('focus-agent', agent.id),
-    }));
+    return agents.map((agent) => {
+      const custom = this._customizationLookup?.(agent);
+      const name = custom?.displayName || agent.agentName || agent.projectName || agent.sessionId.slice(0, 10);
+      return {
+        id: `agent:${agent.id}`,
+        label: `Focus: ${name}`,
+        description: `${agent.isIdle ? 'Idle' : 'Active'} in ${ZONE_MAP.get(agent.currentZone)?.label ?? agent.currentZone}`,
+        icon: agent.isIdle ? '💤' : '🤖',
+        category: 'agent' as const,
+        action: () => this.onCommand('focus-agent', agent.id),
+      };
+    });
   }
 
   toggle(): void {

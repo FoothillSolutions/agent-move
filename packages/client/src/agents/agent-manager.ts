@@ -49,7 +49,7 @@ export class AgentManager {
   private _focusedAgentId: string | null = null;
   private _onAgentClick: ((agentId: string) => void) | null = null;
   private _onAgentHover: ((agentId: string | null, x: number, y: number) => void) | null = null;
-  private _customizationLookup: ((stableKey: string) => { displayName?: string; colorIndex?: number } | undefined) | null = null;
+  private _customizationLookup: ((agent: AgentState) => { displayName: string; colorIndex: number }) | null = null;
   private onSpawnBound: (agent: AgentState) => void;
   private onUpdateBound: (agent: AgentState) => void;
   private onIdleBound: (agent: AgentState) => void;
@@ -74,28 +74,25 @@ export class AgentManager {
     this._onAgentHover = handler;
   }
 
-  /** Set a lookup function to resolve saved customizations by agent name */
-  setCustomizationLookup(lookup: (stableKey: string) => { displayName?: string; colorIndex?: number } | undefined): void {
+  /** Set a lookup function to resolve customized display name + color from agent state */
+  setCustomizationLookup(lookup: (agent: AgentState) => { displayName: string; colorIndex: number }): void {
     this._customizationLookup = lookup;
-  }
-
-  /** Get the stable key used for customization persistence */
-  private getStableKey(agent: AgentState): string {
-    return agent.agentName || agent.projectName || agent.id.slice(0, 8);
   }
 
   /** Get the display name for an agent, respecting customizations */
   getDisplayName(agent: AgentState): string {
-    const stableKey = this.getStableKey(agent);
-    const custom = this._customizationLookup?.(stableKey);
-    return custom?.displayName || stableKey;
+    if (this._customizationLookup) {
+      return this._customizationLookup(agent).displayName;
+    }
+    return agent.agentName || agent.projectName || agent.id.slice(0, 8);
   }
 
   /** Get the effective color index for an agent, respecting customizations */
   getDisplayColorIndex(agent: AgentState): number {
-    const stableKey = this.getStableKey(agent);
-    const custom = this._customizationLookup?.(stableKey);
-    return custom?.colorIndex ?? agent.colorIndex;
+    if (this._customizationLookup) {
+      return this._customizationLookup(agent).colorIndex;
+    }
+    return agent.colorIndex;
   }
 
   constructor(
@@ -224,7 +221,7 @@ export class AgentManager {
       () => this._onAgentHover?.(null, 0, 0),
     );
 
-    // Apply saved customizations (persisted by agent name)
+    // Apply saved customizations (persisted by sessionId)
     const displayName = this.getDisplayName(agent);
     const displayColorIndex = this.getDisplayColorIndex(agent);
     sprite.setCustomName(displayName);
@@ -467,7 +464,7 @@ export class AgentManager {
     this.particles.update(deltaMs);
     this.messageFlow.update(deltaMs);
 
-    // Update relationship lines
+    // Update relationship lines (use customized colorIndex)
     const lineData = new Map<string, { x: number; y: number; parentId: string | null; teamName: string | null; rootSessionId: string; colorIndex: number }>();
     for (const [id, managed] of this.agents) {
       lineData.set(id, {
@@ -476,7 +473,7 @@ export class AgentManager {
         parentId: managed.state.parentId,
         teamName: managed.state.teamName,
         rootSessionId: managed.state.rootSessionId,
-        colorIndex: managed.state.colorIndex,
+        colorIndex: this.getDisplayColorIndex(managed.state),
       });
     }
     this.lines.update(lineData, deltaMs);
@@ -510,7 +507,7 @@ export class AgentManager {
     if (!this._focusedAgentId) return null;
     const managed = this.agents.get(this._focusedAgentId);
     if (!managed) return null;
-    return managed.state.agentName || managed.state.projectName || managed.state.sessionId.slice(0, 10);
+    return this.getDisplayName(managed.state);
   }
 
   /** Get ordered list of active (non-idle, non-done) agent IDs */
@@ -557,7 +554,7 @@ export class AgentManager {
     this.particles.destroy();
   }
 
-  /** Get all agent positions and colors (for minimap) */
+  /** Get all agent positions and colors (for minimap, using customized colorIndex) */
   getAgentPositions(): Array<{ id: string; x: number; y: number; colorIndex: number }> {
     const result: Array<{ id: string; x: number; y: number; colorIndex: number }> = [];
     for (const [id, managed] of this.agents) {
@@ -565,7 +562,7 @@ export class AgentManager {
         id,
         x: managed.sprite.container.x,
         y: managed.sprite.container.y,
-        colorIndex: managed.state.colorIndex,
+        colorIndex: this.getDisplayColorIndex(managed.state),
       });
     }
     return result;

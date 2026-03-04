@@ -11,6 +11,12 @@ export class LeaderboardPanel {
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private sortColumn: 'tokens' | 'cost' | 'duration' | 'tools' | 'velocity' = 'tokens';
   private sortDir: 'asc' | 'desc' = 'desc';
+  private _customizationLookup: ((agent: AgentState) => { displayName: string; colorIndex: number }) | null = null;
+
+  /** Set a lookup function to resolve customized display name + color from agent state */
+  setCustomizationLookup(lookup: (agent: AgentState) => { displayName: string; colorIndex: number }): void {
+    this._customizationLookup = lookup;
+  }
 
   constructor(private store: StateStore) {
     this.el = document.createElement('div');
@@ -103,9 +109,11 @@ export class LeaderboardPanel {
         </thead>
         <tbody>
           ${rows.map((r, i) => {
-            const palette = AGENT_PALETTES[r.colorIndex % AGENT_PALETTES.length];
+            const custom = this._customizationLookup?.(r);
+            const effectiveColorIndex = custom?.colorIndex ?? r.colorIndex;
+            const palette = AGENT_PALETTES[effectiveColorIndex % AGENT_PALETTES.length];
             const color = '#' + palette.body.toString(16).padStart(6, '0');
-            const name = r.agentName || r.projectName || r.sessionId.slice(0, 10);
+            const name = custom?.displayName || r.agentName || r.projectName || r.sessionId.slice(0, 10);
             const totalTokens = r.totalInputTokens + r.totalOutputTokens;
             const barPct = (totalTokens / maxTokens) * 100;
             const badge = i < 3 ? RANK_BADGES[i] : `${i + 1}`;

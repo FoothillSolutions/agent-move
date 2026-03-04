@@ -117,19 +117,22 @@ async function main() {
 
   // ── Feature 6: Agent Customization ──
   const customizer = new AgentCustomizer();
-  const custLookup = (key: string) => customizer.getCustomization(key);
+  const custLookup = (agent: import('@agent-move/shared').AgentState) => customizer.getCustomDisplay(agent);
   agentManager.setCustomizationLookup(custLookup);
   detailPanel.setCustomizationLookup(custLookup);
   overlay.setCustomizationLookup(custLookup);
-  customizer.setChangeHandler((agentId, _stableKey, data) => {
+  leaderboard.setCustomizationLookup(custLookup);
+  customizer.setChangeHandler((agentId, data) => {
     agentManager.applyCustomization(agentId, data.displayName, data.colorIndex);
     if (detailPanel.currentAgentId === agentId) {
       detailPanel.refreshHeader(data.displayName);
     }
+    // Re-render overlay to reflect name/color change
+    overlay.scheduleRender();
   });
   // Wire detail panel "Customize" button to open customizer
-  detailPanel.setCustomizeHandler((agentId, name) => {
-    customizer.open(agentId, name);
+  detailPanel.setCustomizeHandler((agent) => {
+    customizer.open(agent);
   });
   // Wire right-click on agent sprites to open customizer
   pixiApp.canvas.addEventListener('contextmenu', (e) => {
@@ -256,6 +259,9 @@ async function main() {
     }
   });
 
+  // Wire command palette customization lookup (after commandPalette is created)
+  commandPalette.setCustomizationLookup(custLookup);
+
   // Clean up trails when agents shut down
   store.on('agent:shutdown', (agentId: string) => {
     trails.removeAgent(agentId);
@@ -380,6 +386,7 @@ async function main() {
   pixiApp.ticker.add(() => {
     const dt = pixiApp.ticker.deltaMS;
     agentManager.update(dt);
+    world.update(dt);
 
     // Update heatmap overlay position to match camera
     const root = world.root;
