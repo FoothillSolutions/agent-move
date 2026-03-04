@@ -45,6 +45,12 @@ export class AnalyticsPanel {
   private alertEl: HTMLElement | null = null;
   /** Tool usage frequency tracker: toolName -> count */
   private toolCounts = new Map<string, number>();
+  private _customizationLookup: ((agent: AgentState) => { displayName: string; colorIndex: number }) | null = null;
+
+  /** Set a lookup function to resolve customized display name + color from agent state */
+  setCustomizationLookup(lookup: (agent: AgentState) => { displayName: string; colorIndex: number }): void {
+    this._customizationLookup = lookup;
+  }
 
   constructor(store: StateStore) {
     this.store = store;
@@ -118,19 +124,22 @@ export class AnalyticsPanel {
   }
 
   private getSnapshots(): AgentSnapshot[] {
-    return Array.from(this.store.getAgents().values()).map((a) => ({
-      id: a.id,
-      name: a.agentName || a.projectName || a.sessionId.slice(0, 10),
-      model: a.model,
-      inputTokens: a.totalInputTokens,
-      outputTokens: a.totalOutputTokens,
-      cacheReadTokens: a.cacheReadTokens,
-      cacheCreationTokens: a.cacheCreationTokens,
-      colorIndex: a.colorIndex,
-      zone: a.currentZone,
-      isIdle: a.isIdle,
-      spawnedAt: a.spawnedAt,
-    }));
+    return Array.from(this.store.getAgents().values()).map((a) => {
+      const custom = this._customizationLookup?.(a);
+      return {
+        id: a.id,
+        name: custom?.displayName || a.agentName || a.projectName || a.sessionId.slice(0, 10),
+        model: a.model,
+        inputTokens: a.totalInputTokens,
+        outputTokens: a.totalOutputTokens,
+        cacheReadTokens: a.cacheReadTokens,
+        cacheCreationTokens: a.cacheCreationTokens,
+        colorIndex: custom?.colorIndex ?? a.colorIndex,
+        zone: a.currentZone,
+        isIdle: a.isIdle,
+        spawnedAt: a.spawnedAt,
+      };
+    });
   }
 
   private calculateCost(agent: AgentSnapshot): number {

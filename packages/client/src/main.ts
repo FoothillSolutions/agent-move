@@ -122,6 +122,7 @@ async function main() {
   detailPanel.setCustomizationLookup(custLookup);
   overlay.setCustomizationLookup(custLookup);
   leaderboard.setCustomizationLookup(custLookup);
+  analytics.setCustomizationLookup(custLookup);
   customizer.setChangeHandler((agentId, data) => {
     agentManager.applyCustomization(agentId, data.displayName, data.colorIndex);
     if (detailPanel.currentAgentId === agentId) {
@@ -299,6 +300,14 @@ async function main() {
   const analyticsBtn = document.getElementById('analytics-btn');
   analyticsBtn?.addEventListener('click', () => {
     analytics.toggle();
+    analyticsBtn.classList.toggle('active', !analyticsBtn.classList.contains('active'));
+  });
+
+  // Leaderboard button in sidebar
+  const leaderboardBtn = document.getElementById('leaderboard-btn');
+  leaderboardBtn?.addEventListener('click', () => {
+    leaderboard.toggle();
+    leaderboardBtn.classList.toggle('active', !leaderboardBtn.classList.contains('active'));
   });
 
   // Command palette hint button
@@ -324,6 +333,7 @@ async function main() {
     switch (e.key) {
       case 'a':
         analytics.toggle();
+        analyticsBtn?.classList.toggle('active');
         break;
       case 'h':
         heatmapVisible = !heatmapVisible;
@@ -372,6 +382,7 @@ async function main() {
         break;
       case 'l':
         leaderboard.toggle();
+        leaderboardBtn?.classList.toggle('active');
         break;
       case 'i':
         world.toggleIsometric();
