@@ -74,22 +74,6 @@ canvas { display: block; }
   margin-bottom: 14px;
 }
 .sidebar-top-row h2 { margin-bottom: 0; }
-.sidebar-top-row > #analytics-btn {
-  width: 28px;
-  height: 28px;
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 6px;
-  background: rgba(255,255,255,0.05);
-  color: #888;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-  padding: 0;
-}
-.sidebar-top-row > #analytics-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .sidebar-actions {
   display: flex;
   gap: 4px;
@@ -110,6 +94,7 @@ canvas { display: block; }
   padding: 0;
 }
 .sidebar-actions button:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.sidebar-actions button.active { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.25); }
 
 #overlay .agent-card {
   background: rgba(255, 255, 255, 0.04);
