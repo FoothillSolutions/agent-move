@@ -61,7 +61,7 @@
 
   /* Layout */
   --top-bar-height: 48px;
-  --right-panel-width: 360px;
+  --right-panel-width: 400px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1001,13 +1001,13 @@ canvas { display: block; }
 .lb-empty { text-align: center; color: var(--text-dim); padding: 40px 0; }
 .lb-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .lb-table th {
-  text-align: left; padding: 6px 8px; color: var(--text-dim);
+  text-align: left; padding: 5px 6px; color: var(--text-dim);
   border-bottom: 1px solid var(--border-subtle); font-weight: 600; font-size: var(--text-sm);
   text-transform: uppercase; letter-spacing: 0.5px;
 }
 .lb-sortable { cursor: pointer; }
 .lb-sortable:hover { color: var(--text-secondary); }
-.lb-table td { padding: 8px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); }
+.lb-table td { padding: 5px 6px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); }
 .lb-rank { font-size: 14px; text-align: center; width: 30px; }
 .lb-name { white-space: nowrap; }
 .lb-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }

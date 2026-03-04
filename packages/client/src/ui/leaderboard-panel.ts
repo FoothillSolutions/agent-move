@@ -96,7 +96,6 @@ export class LeaderboardPanel {
             <th class="lb-sortable" data-col="cost">Cost</th>
             <th class="lb-sortable" data-col="duration">Duration</th>
             <th class="lb-sortable" data-col="tools">Tools</th>
-            <th class="lb-sortable" data-col="velocity">Tok/min</th>
           </tr>
         </thead>
         <tbody>
@@ -121,7 +120,6 @@ export class LeaderboardPanel {
               <td>$${r.cost.toFixed(3)}</td>
               <td>${formatDuration(r.duration)}</td>
               <td>${r.toolUseCount}</td>
-              <td>${formatTokens(Math.round(r.velocity))}</td>
             </tr>`;
           }).join('')}
         </tbody>
