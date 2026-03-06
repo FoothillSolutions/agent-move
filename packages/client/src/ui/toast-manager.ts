@@ -20,6 +20,11 @@ export class ToastManager {
   private containerEl: HTMLElement;
   private store: StateStore;
   private toasts: ToastEntry[] = [];
+  private onSpawnBound: (agent: AgentState) => void;
+  private onIdleBound: (agent: AgentState) => void;
+  private onShutdownBound: (agentId: string) => void;
+  private onAnomalyBound: (anomaly: AnomalyEvent) => void;
+  private onTaskBound: (data: { taskSubject: string }) => void;
 
   constructor(store: StateStore) {
     this.store = store;
@@ -31,11 +36,16 @@ export class ToastManager {
     document.body.appendChild(this.containerEl);
 
     // Listen for events
-    this.store.on('agent:spawn', (agent) => this.onSpawn(agent));
-    this.store.on('agent:idle', (agent) => this.onIdle(agent));
-    this.store.on('agent:shutdown', (agentId) => this.onShutdown(agentId));
-    this.store.on('anomaly:alert', (anomaly) => this.onAnomaly(anomaly));
-    this.store.on('task:completed', ({ taskSubject }) => this.onTaskCompleted(taskSubject));
+    this.onSpawnBound = (agent) => this.onSpawn(agent);
+    this.onIdleBound = (agent) => this.onIdle(agent);
+    this.onShutdownBound = (agentId) => this.onShutdown(agentId);
+    this.onAnomalyBound = (anomaly) => this.onAnomaly(anomaly);
+    this.onTaskBound = ({ taskSubject }) => this.onTaskCompleted(taskSubject);
+    this.store.on('agent:spawn', this.onSpawnBound);
+    this.store.on('agent:idle', this.onIdleBound);
+    this.store.on('agent:shutdown', this.onShutdownBound);
+    this.store.on('anomaly:alert', this.onAnomalyBound);
+    this.store.on('task:completed', this.onTaskBound);
   }
 
   private getName(agent: AgentState): string {
@@ -130,6 +140,11 @@ export class ToastManager {
   }
 
   dispose(): void {
+    this.store.off('agent:spawn', this.onSpawnBound);
+    this.store.off('agent:idle', this.onIdleBound);
+    this.store.off('agent:shutdown', this.onShutdownBound);
+    this.store.off('anomaly:alert', this.onAnomalyBound);
+    this.store.off('task:completed', this.onTaskBound);
     for (const t of this.toasts) {
       clearTimeout(t.timer);
       t.el.remove();

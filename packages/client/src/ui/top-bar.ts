@@ -30,6 +30,10 @@ export class TopBar {
   private hooksDot: HTMLElement;
   private focusBar: HTMLElement;
   private hookEventCount = 0;
+  private onHooksStatusBound: () => void;
+  private onPermRequestBound: () => void;
+  private onPermResolvedBound: () => void;
+  private onConnectionStatusBound: (status: import('../connection/state-store.js').ConnectionStatus) => void;
 
   constructor(store: StateStore) {
     this.store = store;
@@ -39,9 +43,12 @@ export class TopBar {
     this.focusBar = document.getElementById('focus-sub-bar')!;
 
     // Track hook event count
-    store.on('hooks:status', () => { this.hookEventCount++; });
-    store.on('permission:request', () => { this.hookEventCount++; });
-    store.on('permission:resolved', () => { this.hookEventCount++; });
+    this.onHooksStatusBound = () => { this.hookEventCount++; };
+    this.onPermRequestBound = () => { this.hookEventCount++; };
+    this.onPermResolvedBound = () => { this.hookEventCount++; };
+    store.on('hooks:status', this.onHooksStatusBound);
+    store.on('permission:request', this.onPermRequestBound);
+    store.on('permission:resolved', this.onPermResolvedBound);
 
     // Nav tabs
     document.querySelectorAll('.tb-nav-tab').forEach(tab => {
@@ -52,7 +59,7 @@ export class TopBar {
     });
 
     // Connection status
-    this.store.on('connection:status', (status) => {
+    this.onConnectionStatusBound = (status) => {
       const isConnected = status === 'connected';
       this.connectionDot.classList.toggle('connected', isConnected);
       this.connectionDot.classList.toggle('disconnected', !isConnected);
@@ -60,7 +67,8 @@ export class TopBar {
 
       const bar = document.getElementById('disconnected-bar')!;
       bar.classList.toggle('visible', !isConnected);
-    });
+    };
+    this.store.on('connection:status', this.onConnectionStatusBound);
 
     // Stats updates
     this.refreshTimer = setInterval(() => this.updateStats(), 1000);
@@ -172,5 +180,9 @@ export class TopBar {
   dispose(): void {
     clearInterval(this.refreshTimer);
     clearInterval(this.sampleTimer);
+    this.store.off('hooks:status', this.onHooksStatusBound);
+    this.store.off('permission:request', this.onPermRequestBound);
+    this.store.off('permission:resolved', this.onPermResolvedBound);
+    this.store.off('connection:status', this.onConnectionStatusBound);
   }
 }

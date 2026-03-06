@@ -41,6 +41,8 @@ export class ActivityFeed {
   private activeKind: string = 'all';
   private activeAgent: string = '';
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  // Store listener references for cleanup
+  private boundListeners: Array<{ event: string; fn: (...args: any[]) => void }> = [];
 
   constructor(store: StateStore, parentEl: HTMLElement) {
     this.store = store;
@@ -104,15 +106,19 @@ export class ActivityFeed {
       this.autoScroll = scrollHeight - scrollTop - clientHeight < 40;
     });
 
-    // Bind events
-    store.on('state:reset', (agents) => {
+    // Bind events (track for cleanup)
+    const on = (event: string, fn: (...args: any[]) => void) => {
+      store.on(event as any, fn);
+      this.boundListeners.push({ event, fn });
+    };
+    on('state:reset', (agents: Map<string, AgentState>) => {
       for (const [, a] of agents) {
         this.add('spawn', this.agentHtml(a, 'connected'), this.name(a));
       }
       this.refreshAgentDropdown();
     });
-    store.on('agent:spawn', (a) => this.add('spawn', this.agentHtml(a, 'spawned'), this.name(a)));
-    store.on('agent:update', (a) => {
+    on('agent:spawn', (a: AgentState) => this.add('spawn', this.agentHtml(a, 'spawned'), this.name(a)));
+    on('agent:update', (a: AgentState) => {
       if (a.currentTool) {
         this.add(
           'tool',
@@ -121,13 +127,13 @@ export class ActivityFeed {
         );
       }
     });
-    store.on('agent:idle', (a) => this.add('idle', this.agentHtml(a, 'idle'), this.name(a)));
-    store.on('agent:shutdown', (id) => this.add('shutdown', `Agent <span class="feed-dim">${this.esc(id.slice(0, 10))}</span> shut down`, id));
-    store.on('permission:request', (p: PendingPermission) => this.add('permission', `\u{1F512} Permission request: <strong>${this.esc(p.toolName)}</strong>`, ''));
-    store.on('permission:resolved', ({ permissionId, decision }) => this.add('permission', `\u{1F513} Permission ${decision}: <span class="feed-dim">${this.esc(permissionId.slice(0, 8))}</span>`, ''));
-    store.on('anomaly:alert', (a: AnomalyEvent) => this.add('anomaly', `\u26A0\uFE0F ${this.esc(a.agentName)}: ${this.esc(a.message)}`, a.agentName));
-    store.on('task:completed', ({ taskSubject }) => this.add('task', `\u2705 Task completed: ${this.esc(taskSubject)}`, ''));
-    store.on('hooks:status', () => this.add('hooks', 'Hook event received', ''));
+    on('agent:idle', (a: AgentState) => this.add('idle', this.agentHtml(a, 'idle'), this.name(a)));
+    on('agent:shutdown', (id: string) => this.add('shutdown', `Agent <span class="feed-dim">${this.esc(id.slice(0, 10))}</span> shut down`, id));
+    on('permission:request', (p: PendingPermission) => this.add('permission', `\u{1F512} Permission request: <strong>${this.esc(p.toolName)}</strong>`, ''));
+    on('permission:resolved', ({ permissionId, decision }: { permissionId: string; decision: string }) => this.add('permission', `\u{1F513} Permission ${decision}: <span class="feed-dim">${this.esc(permissionId.slice(0, 8))}</span>`, ''));
+    on('anomaly:alert', (a: AnomalyEvent) => this.add('anomaly', `\u26A0\uFE0F ${this.esc(a.agentName)}: ${this.esc(a.message)}`, a.agentName));
+    on('task:completed', ({ taskSubject }: { taskSubject: string }) => this.add('task', `\u2705 Task completed: ${this.esc(taskSubject)}`, ''));
+    on('hooks:status', () => this.add('hooks', 'Hook event received', ''));
   }
 
   show(): void {
@@ -326,6 +332,10 @@ export class ActivityFeed {
 
   destroy(): void {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    for (const { event, fn } of this.boundListeners) {
+      this.store.off(event as any, fn);
+    }
+    this.boundListeners = [];
     this.container.remove();
   }
 }

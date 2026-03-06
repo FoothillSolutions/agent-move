@@ -9,6 +9,8 @@ export class PermissionPanel {
   private container: HTMLElement;
   private store: StateStore;
   private permissions: PendingPermission[] = [];
+  private onPermRequestBound: (perm: PendingPermission) => void;
+  private onPermResolvedBound: (data: { permissionId: string }) => void;
 
   constructor(store: StateStore) {
     this.store = store;
@@ -19,14 +21,16 @@ export class PermissionPanel {
     this.container.setAttribute('aria-label', 'Permission requests');
     document.body.appendChild(this.container);
 
-    store.on('permission:request', (perm) => {
+    this.onPermRequestBound = (perm) => {
       this.permissions.push(perm);
       this.render();
-    });
-    store.on('permission:resolved', ({ permissionId }) => {
+    };
+    this.onPermResolvedBound = ({ permissionId }) => {
       this.permissions = this.permissions.filter(p => p.permissionId !== permissionId);
       this.render();
-    });
+    };
+    store.on('permission:request', this.onPermRequestBound);
+    store.on('permission:resolved', this.onPermResolvedBound);
   }
 
   private render(): void {
@@ -167,6 +171,8 @@ export class PermissionPanel {
   }
 
   dispose(): void {
+    this.store.off('permission:request', this.onPermRequestBound);
+    this.store.off('permission:resolved', this.onPermResolvedBound);
     this.container.remove();
   }
 }

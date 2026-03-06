@@ -26,6 +26,11 @@ export class NotificationPanel {
   private notifications: Notification[] = [];
   private visible = false;
   private badgeEl: HTMLElement;
+  private onPermRequestBound: (perm: PendingPermission) => void;
+  private onAnomalyBound: (anomaly: AnomalyEvent) => void;
+  private onTaskBound: (data: { taskSubject: string }) => void;
+  private onSpawnBound: (agent: AgentState) => void;
+  private onShutdownBound: () => void;
 
   constructor(store: StateStore) {
     this.store = store;
@@ -43,11 +48,16 @@ export class NotificationPanel {
     document.body.appendChild(this.container);
 
     // Listen to events
-    store.on('permission:request', (perm) => this.addPermission(perm));
-    store.on('anomaly:alert', (anomaly) => this.addAnomaly(anomaly));
-    store.on('task:completed', ({ taskSubject }) => this.addTask(taskSubject));
-    store.on('agent:spawn', (agent) => this.addLifecycle(agent, 'spawned'));
-    store.on('agent:shutdown', () => this.addLifecycleSimple('Agent shut down'));
+    this.onPermRequestBound = (perm) => this.addPermission(perm);
+    this.onAnomalyBound = (anomaly) => this.addAnomaly(anomaly);
+    this.onTaskBound = ({ taskSubject }) => this.addTask(taskSubject);
+    this.onSpawnBound = (agent) => this.addLifecycle(agent, 'spawned');
+    this.onShutdownBound = () => this.addLifecycleSimple('Agent shut down');
+    store.on('permission:request', this.onPermRequestBound);
+    store.on('anomaly:alert', this.onAnomalyBound);
+    store.on('task:completed', this.onTaskBound);
+    store.on('agent:spawn', this.onSpawnBound);
+    store.on('agent:shutdown', this.onShutdownBound);
   }
 
   getBadgeElement(): HTMLElement {
@@ -182,6 +192,11 @@ export class NotificationPanel {
   }
 
   dispose(): void {
+    this.store.off('permission:request', this.onPermRequestBound);
+    this.store.off('anomaly:alert', this.onAnomalyBound);
+    this.store.off('task:completed', this.onTaskBound);
+    this.store.off('agent:spawn', this.onSpawnBound);
+    this.store.off('agent:shutdown', this.onShutdownBound);
     this.container.remove();
     this.badgeEl.remove();
   }

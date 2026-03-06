@@ -106,12 +106,21 @@ export class StateStore {
     return this._timeline;
   }
 
+  private static readonly MAX_TIMELINE = 5000;
+
   private pushTimelineEvent(type: TimelineEvent['type'], agent: AgentState, timestamp: number): void {
     this._timeline.push({ type, agent: { ...agent }, timestamp });
-    // Trim to 30 min
+    // Trim to 30 min or hard cap
     const cutoff = Date.now() - 30 * 60 * 1000;
-    while (this._timeline.length > 0 && this._timeline[0].timestamp < cutoff) {
-      this._timeline.shift();
+    let trimCount = 0;
+    while (trimCount < this._timeline.length && this._timeline[trimCount].timestamp < cutoff) {
+      trimCount++;
+    }
+    // Also enforce hard cap
+    const overCap = this._timeline.length - StateStore.MAX_TIMELINE;
+    if (overCap > 0) trimCount = Math.max(trimCount, overCap);
+    if (trimCount > 0) {
+      this._timeline.splice(0, trimCount);
     }
   }
 
@@ -134,6 +143,13 @@ export class StateStore {
     if (set) {
       for (const fn of set) fn(data);
     }
+  }
+
+  dispose(): void {
+    this.listeners.clear();
+    this.agents.clear();
+    this._timeline = [];
+    this._pendingPermissions.clear();
   }
 
   setConnectionStatus(status: ConnectionStatus): void {

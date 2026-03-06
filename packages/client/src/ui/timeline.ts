@@ -57,6 +57,9 @@ export class Timeline {
 
   // Bound event handlers (stored for cleanup)
   private resizeHandler = () => this.resizeCanvas();
+  private onTimelineBound: () => void;
+  private onSpawnBound: () => void;
+  private onShutdownBound: () => void;
 
   // Replay state
   private replayAgents = new Map<string, AgentState>();
@@ -171,14 +174,17 @@ export class Timeline {
     });
 
     // When new timeline snapshot arrives, re-render
-    this.store.on('timeline:snapshot', () => {
+    this.onTimelineBound = () => {
       this.updateAgentFilters();
       this.render();
-    });
+    };
+    this.store.on('timeline:snapshot', this.onTimelineBound);
 
     // Update agent filters when agents spawn/shutdown
-    this.store.on('agent:spawn', () => this.updateAgentFilters());
-    this.store.on('agent:shutdown', () => this.updateAgentFilters());
+    this.onSpawnBound = () => this.updateAgentFilters();
+    this.onShutdownBound = () => this.updateAgentFilters();
+    this.store.on('agent:spawn', this.onSpawnBound);
+    this.store.on('agent:shutdown', this.onShutdownBound);
 
     // Re-render periodically while live
     this.liveRenderTimer = setInterval(() => {
@@ -194,6 +200,9 @@ export class Timeline {
     if (this.liveRenderTimer) clearInterval(this.liveRenderTimer);
     if (this.animId) cancelAnimationFrame(this.animId);
     window.removeEventListener('resize', this.resizeHandler);
+    this.store.off('timeline:snapshot', this.onTimelineBound);
+    this.store.off('agent:spawn', this.onSpawnBound);
+    this.store.off('agent:shutdown', this.onShutdownBound);
     this.el.remove();
   }
 

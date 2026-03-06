@@ -14,6 +14,9 @@ export class AgentDetailPanel {
   private selectedAgentId: string | null = null;
   private entries: ActivityEntry[] = [];
   private historyListener: ((data: { agentId: string; entries: ActivityEntry[] }) => void) | null = null;
+  private onUpdateBound: (agent: AgentState) => void;
+  private onIdleBound: (agent: AgentState) => void;
+  private onShutdownBound: (agentId: string) => void;
   private _onCustomize: ((agent: AgentState) => void) | null = null;
   private _customizationLookup: ((agent: AgentState) => { displayName: string; colorIndex: number }) | null = null;
   private diffModal: DiffViewerModal;
@@ -77,18 +80,21 @@ export class AgentDetailPanel {
     this.store.on('agent:history', this.historyListener);
 
     // Live updates for the selected agent
-    this.store.on('agent:update', (agent) => {
+    this.onUpdateBound = (agent) => {
       if (agent.id === this.selectedAgentId) {
         this.renderStats(agent);
         this.renderGitInfo(agent);
       }
-    });
-    this.store.on('agent:idle', (agent) => {
+    };
+    this.onIdleBound = (agent) => {
       if (agent.id === this.selectedAgentId) this.renderStats(agent);
-    });
-    this.store.on('agent:shutdown', (agentId) => {
+    };
+    this.onShutdownBound = (agentId) => {
       if (agentId === this.selectedAgentId) this.close();
-    });
+    };
+    this.store.on('agent:update', this.onUpdateBound);
+    this.store.on('agent:idle', this.onIdleBound);
+    this.store.on('agent:shutdown', this.onShutdownBound);
   }
 
   /** Set handler for the customize button */
@@ -439,4 +445,11 @@ export class AgentDetailPanel {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
+  dispose(): void {
+    if (this.historyListener) this.store.off('agent:history', this.historyListener);
+    this.store.off('agent:update', this.onUpdateBound);
+    this.store.off('agent:idle', this.onIdleBound);
+    this.store.off('agent:shutdown', this.onShutdownBound);
+    this.panelEl.remove();
+  }
 }

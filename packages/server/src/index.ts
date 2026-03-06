@@ -92,6 +92,8 @@ export async function main() {
   const shutdown = async () => {
     console.log('Shutting down...');
     watcher.stop();
+    hookManager.dispose();
+    broadcaster.dispose();
     stateManager.dispose();
     await app.close();
     process.exit(0);

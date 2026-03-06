@@ -5,17 +5,23 @@ import type { ServerMessage, AgentEvent, AnomalyEvent, TaskGraphData, ToolChainD
 
 export class Broadcaster {
   private clients = new Set<WebSocket>();
+  private boundListeners: Array<{ emitter: { removeListener(e: string, fn: (...args: any[]) => void): void }; event: string; fn: (...args: any[]) => void }> = [];
 
   constructor(private stateManager: AgentStateManager, hookManager?: HookEventManager) {
+    const track = (emitter: any, event: string, fn: (...args: any[]) => void) => {
+      emitter.on(event, fn);
+      this.boundListeners.push({ emitter, event, fn });
+    };
+
     if (hookManager) {
-      hookManager.on('permission:request', (permission: PendingPermission) => {
+      track(hookManager, 'permission:request', (permission: PendingPermission) => {
         this.broadcast({
           type: 'permission:request',
           permission,
           timestamp: Date.now(),
         });
       });
-      hookManager.on('permission:resolved', (payload: { permissionId: string; decision: 'allow' | 'deny' }) => {
+      track(hookManager, 'permission:resolved', (payload: { permissionId: string; decision: 'allow' | 'deny' }) => {
         this.broadcast({
           type: 'permission:resolved',
           permissionId: payload.permissionId,
@@ -26,7 +32,7 @@ export class Broadcaster {
     }
     // Forward all agent events to connected clients
     for (const eventType of ['agent:spawn', 'agent:update', 'agent:idle', 'agent:shutdown'] as const) {
-      stateManager.on(eventType, (event: AgentEvent) => {
+      track(stateManager, eventType, (event: AgentEvent) => {
         if (eventType === 'agent:shutdown') {
           this.broadcast({
             type: 'agent:shutdown',
@@ -44,7 +50,7 @@ export class Broadcaster {
     }
 
     // Forward anomaly events
-    stateManager.anomalyDetector.on('anomaly', (anomaly: AnomalyEvent) => {
+    track(stateManager.anomalyDetector, 'anomaly', (anomaly: AnomalyEvent) => {
       this.broadcast({
         type: 'anomaly:alert',
         anomaly,
@@ -53,7 +59,7 @@ export class Broadcaster {
     });
 
     // Forward tool chain changes
-    stateManager.on('toolchain:changed', (payload: { data: ToolChainData; timestamp: number }) => {
+    track(stateManager, 'toolchain:changed', (payload: { data: ToolChainData; timestamp: number }) => {
       this.broadcast({
         type: 'toolchain:snapshot',
         data: payload.data,
@@ -62,7 +68,7 @@ export class Broadcaster {
     });
 
     // Forward task graph changes
-    stateManager.on('taskgraph:changed', (payload: { data: TaskGraphData; timestamp: number }) => {
+    track(stateManager, 'taskgraph:changed', (payload: { data: TaskGraphData; timestamp: number }) => {
       this.broadcast({
         type: 'taskgraph:snapshot',
         data: payload.data,
@@ -71,7 +77,7 @@ export class Broadcaster {
     });
 
     // Forward task completion notifications (hook-sourced)
-    stateManager.on('task:completed', (payload: { taskId: string; taskSubject: string; agentId: string }) => {
+    track(stateManager, 'task:completed', (payload: { taskId: string; taskSubject: string; agentId: string }) => {
       this.broadcast({
         type: 'task:completed',
         taskId: payload.taskId,
@@ -141,6 +147,14 @@ export class Broadcaster {
     if (ws.readyState === 1) {
       try { ws.send(JSON.stringify(message)); } catch { this.clients.delete(ws); }
     }
+  }
+
+  dispose(): void {
+    for (const { emitter, event, fn } of this.boundListeners) {
+      emitter.removeListener(event, fn);
+    }
+    this.boundListeners = [];
+    this.clients.clear();
   }
 
   private broadcast(message: ServerMessage) {

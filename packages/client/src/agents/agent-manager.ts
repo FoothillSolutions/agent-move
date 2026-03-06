@@ -59,6 +59,7 @@ export class AgentManager {
   private onIdleBound: (agent: AgentState) => void;
   private onShutdownBound: (agentId: string) => void;
   private onResetBound: (agents: Map<string, AgentState>) => void;
+  private onAnomalyBound: (anomaly: import('@agent-move/shared').AnomalyEvent) => void;
 
   setSoundManager(sound: SoundManager): void {
     this.sound = sound;
@@ -128,12 +129,13 @@ export class AgentManager {
     this.store.on('state:reset', this.onResetBound);
 
     // Anomaly badge on sprites
-    this.store.on('anomaly:alert', (anomaly) => {
+    this.onAnomalyBound = (anomaly) => {
       const managed = this.agents.get(anomaly.agentId);
       if (managed) {
         managed.sprite.setAnomaly(anomaly.kind);
       }
-    });
+    };
+    this.store.on('anomaly:alert', this.onAnomalyBound);
   }
 
   /** Build rich speech messages from agent state */
@@ -604,6 +606,7 @@ export class AgentManager {
     this.store.off('agent:idle', this.onIdleBound);
     this.store.off('agent:shutdown', this.onShutdownBound);
     this.store.off('state:reset', this.onResetBound);
+    this.store.off('anomaly:alert', this.onAnomalyBound);
     for (const [, managed] of this.agents) {
       managed.sprite.destroy();
     }

@@ -46,6 +46,7 @@ export class AnalyticsPanel {
   private toolCounts = new Map<string, number>();
   private zoneTime = new Map<ZoneId, number>();
   private _customizationLookup: ((agent: AgentState) => { displayName: string; colorIndex: number }) | null = null;
+  private onAgentUpdateBound: (agent: AgentState) => void;
 
   setCustomizationLookup(lookup: (agent: AgentState) => { displayName: string; colorIndex: number }): void {
     this._customizationLookup = lookup;
@@ -76,13 +77,14 @@ export class AnalyticsPanel {
     this.sampleTimer = setInterval(() => this.takeSample(), SAMPLE_INTERVAL);
 
     // Listen for updates
-    this.store.on('agent:update', (agent: AgentState) => {
+    this.onAgentUpdateBound = (agent: AgentState) => {
       this.checkThreshold();
       if (agent.currentTool) {
         const count = this.toolCounts.get(agent.currentTool) ?? 0;
         this.toolCounts.set(agent.currentTool, count + 1);
       }
-    });
+    };
+    this.store.on('agent:update', this.onAgentUpdateBound);
   }
 
   show(): void {
@@ -487,6 +489,7 @@ export class AnalyticsPanel {
   dispose(): void {
     clearInterval(this.refreshTimer);
     clearInterval(this.sampleTimer);
+    this.store.off('agent:update', this.onAgentUpdateBound);
     this.contentEl.remove();
     this.alertEl?.remove();
   }

@@ -45,11 +45,21 @@ export class FileWatcher {
 
   stop() {
     this.watcher?.close();
+    this.byteOffsets.clear();
+    this.fileLocks.clear();
   }
 
   private processFile(filePath: string): void {
     const prev = this.fileLocks.get(filePath) ?? Promise.resolve();
-    const next = prev.then(() => this.doProcessFile(filePath)).catch(() => {});
+    const next = prev
+      .then(() => this.doProcessFile(filePath))
+      .catch(() => {})
+      .finally(() => {
+        // Clean up lock entry once the chain settles
+        if (this.fileLocks.get(filePath) === next) {
+          this.fileLocks.delete(filePath);
+        }
+      });
     this.fileLocks.set(filePath, next);
   }
 

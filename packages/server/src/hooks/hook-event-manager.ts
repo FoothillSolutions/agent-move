@@ -61,6 +61,14 @@ export class HookEventManager extends EventEmitter {
     return [];
   }
 
+  dispose(): void {
+    for (const deferred of this.pending.values()) {
+      clearTimeout(deferred.timeout);
+    }
+    this.pending.clear();
+    this.removeAllListeners();
+  }
+
   // ---------------------------------------------------------------------------
   // Private
   // ---------------------------------------------------------------------------

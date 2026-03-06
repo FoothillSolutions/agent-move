@@ -581,6 +581,25 @@ async function main() {
     }
   });
 
+  // Cleanup on page unload — release resources and stop timers
+  window.addEventListener('beforeunload', () => {
+    ws.disconnect();
+    agentManager.dispose();
+    overlay.dispose();
+    detailPanel.dispose();
+    timeline.dispose();
+    analytics.dispose();
+    leaderboard.dispose();
+    topBar.dispose();
+    toasts.dispose();
+    notificationPanel.dispose();
+    permissionPanel.dispose();
+    waterfallPanel.destroy();
+    activityFeed.destroy();
+    minimap.dispose();
+    store.dispose();
+  });
+
   // Game loop
   pixiApp.ticker.add(() => {
     const dt = pixiApp.ticker.deltaMS;

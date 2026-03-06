@@ -943,6 +943,9 @@ export class AgentStateManager extends EventEmitter {
 
     this.agents.delete(sessionId);
     this.activityHistory.delete(sessionId);
+    this.pendingSubagentTasks.delete(sessionId);
+    this.pendingSubagentNames.delete(sessionId);
+    this.pendingSubagentTeams.delete(sessionId);
     this.anomalyDetector.removeAgent(sessionId);
     this.toolChainTracker.resetAgent(sessionId);
     // If no agents remain, fully clear tool chain data
@@ -950,6 +953,15 @@ export class AgentStateManager extends EventEmitter {
       this.toolChainTracker.reset();
     }
     this.emit('toolchain:changed', { data: this.toolChainTracker.getSnapshot(), timestamp: Date.now() });
+
+    // Clean up pendingRecipients if no more agents share this rootSessionId
+    if (agent?.rootSessionId) {
+      const rootId = agent.rootSessionId;
+      const hasRelated = [...this.agents.values()].some(a => a.rootSessionId === rootId);
+      if (!hasRelated) {
+        this.pendingRecipients.delete(rootId);
+      }
+    }
 
     // Clean up tasks owned by this agent
     if (this.taskGraphManager.removeAgentTasks(sessionId)) {
@@ -1115,6 +1127,8 @@ export class AgentStateManager extends EventEmitter {
   private clearAllTimers(): void {
     for (const timer of this.idleTimers.values()) clearTimeout(timer);
     this.idleTimers.clear();
+    for (const timer of this.shutdownTimers.values()) clearTimeout(timer);
+    this.shutdownTimers.clear();
     for (const timer of this.identityTimers.values()) clearTimeout(timer);
     this.identityTimers.clear();
   }
