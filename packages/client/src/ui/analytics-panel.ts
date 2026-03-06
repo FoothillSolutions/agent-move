@@ -413,10 +413,20 @@ export class AnalyticsPanel {
     return sorted.map(([tool, count]) => {
       const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
       const color = tool.startsWith('mcp__') ? '#60a5fa' : '#a78bfa';
+      // Shorten long MCP tool names: mcp__server__tool → server / tool
+      let displayName = tool;
+      if (tool.startsWith('mcp__')) {
+        const parts = tool.slice(5).split('__');
+        if (parts.length >= 2) {
+          const server = parts.slice(0, -1).join('/');
+          const method = parts[parts.length - 1];
+          displayName = `${server} / ${method}`;
+        }
+      }
 
       return `<div class="tool-bar">
         <div class="tool-bar-label">
-          <span class="tool-bar-name">${escapeHtml(tool)}</span>
+          <span class="tool-bar-name" title="${escapeHtml(tool)}">${escapeHtml(displayName)}</span>
           <span class="tool-bar-count">${count}</span>
         </div>
         <div class="tool-bar-track">
@@ -456,11 +466,11 @@ export class AnalyticsPanel {
           <div class="card-sub">${formatTokens(totalTokens)} total</div>
         </div>
       </div>
-      ${agentRates.length > 0 ? `<div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">Cost rate ($/min)</div>` +
+      ${agentRates.length > 0 ? `<div class="cost-rate-header">Cost rate ($/min)</div>` +
         agentRates.slice(0, 5).map(a =>
-          `<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--text-secondary)">
-            <span>${escapeHtml(a.name)}</span>
-            <span style="color:var(--text-dim)">$${a.rate.toFixed(4)}/min</span>
+          `<div class="cost-rate-row">
+            <span class="cost-rate-name">${escapeHtml(a.name)}</span>
+            <span class="cost-rate-value">$${a.rate.toFixed(4)}/min</span>
           </div>`
         ).join('') : ''}
     `;

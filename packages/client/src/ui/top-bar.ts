@@ -1,4 +1,3 @@
-import type { AgentState } from '@agent-move/shared';
 import { computeAgentCost } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 import { formatTokens } from '../utils/formatting.js';
@@ -23,9 +22,6 @@ export class TopBar {
   private refreshTimer: ReturnType<typeof setInterval>;
   private sampleTimer: ReturnType<typeof setInterval>;
   private samples: TokenSample[] = [];
-  private activeTab: NavTab = 'monitor';
-  private onTabChange: ((tab: NavTab) => void) | null = null;
-
   private connectionDot: HTMLElement;
   private hooksDot: HTMLElement;
   private focusBar: HTMLElement;
@@ -50,14 +46,6 @@ export class TopBar {
     store.on('permission:request', this.onPermRequestBound);
     store.on('permission:resolved', this.onPermResolvedBound);
 
-    // Nav tabs
-    document.querySelectorAll('.tb-nav-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        const tabName = (tab as HTMLElement).dataset.tab as NavTab;
-        this.setActiveTab(tabName);
-      });
-    });
-
     // Connection status
     this.onConnectionStatusBound = (status) => {
       const isConnected = status === 'connected';
@@ -73,37 +61,6 @@ export class TopBar {
     // Stats updates
     this.refreshTimer = setInterval(() => this.updateStats(), 1000);
     this.sampleTimer = setInterval(() => this.takeSample(), SAMPLE_INTERVAL);
-  }
-
-  setTabChangeHandler(handler: (tab: NavTab) => void): void {
-    this.onTabChange = handler;
-  }
-
-  getActiveTab(): NavTab {
-    return this.activeTab;
-  }
-
-  setActiveTab(tab: NavTab): void {
-    if (tab === this.activeTab) {
-      // Clicking active non-monitor tab closes the panel
-      if (tab !== 'monitor') {
-        this.activeTab = 'monitor';
-        this.updateTabUI();
-        this.onTabChange?.('monitor');
-      }
-      return;
-    }
-    this.activeTab = tab;
-    this.updateTabUI();
-    this.onTabChange?.(tab);
-  }
-
-  private updateTabUI(): void {
-    document.querySelectorAll('.tb-nav-tab').forEach(el => {
-      const t = (el as HTMLElement).dataset.tab;
-      el.classList.toggle('active', t === this.activeTab);
-      el.setAttribute('aria-selected', String(t === this.activeTab));
-    });
   }
 
   showFocus(name: string): void {

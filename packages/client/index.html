@@ -16,6 +16,9 @@
   <div id="disconnected-bar"></div>
   <div id="top-bar">
     <div class="tb-left">
+      <button id="sb-toggle" class="tb-hamburger" title="Toggle sidebar ([)" aria-label="Toggle sidebar">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+      </button>
       <div class="tb-logo">
         <svg class="logo-icon" viewBox="0 0 32 32" width="18" height="18">
           <defs><linearGradient id="logo-bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#e94560"/><stop offset="100%" style="stop-color:#c23152"/></linearGradient></defs>
@@ -26,18 +29,6 @@
         <span class="tb-logo-dot" id="connection-dot" title="Disconnected"></span>
         <span class="tb-logo-dot" id="hooks-dot" title="Hooks: not detected"></span>
         <span class="tb-logo-text">AgentMove</span>
-      </div>
-    </div>
-    <div class="tb-center">
-      <div class="tb-nav" role="tablist">
-        <button class="tb-nav-tab active" data-tab="monitor" role="tab" aria-selected="true">Monitor</button>
-        <button class="tb-nav-tab" data-tab="analytics" role="tab" aria-selected="false">Analytics</button>
-        <button class="tb-nav-tab" data-tab="leaderboard" role="tab" aria-selected="false">Leaderboard</button>
-        <button class="tb-nav-tab" data-tab="toolchain" role="tab" aria-selected="false">Tool Chains</button>
-        <button class="tb-nav-tab" data-tab="taskgraph" role="tab" aria-selected="false">Tasks</button>
-        <button class="tb-nav-tab" data-tab="activity" role="tab" aria-selected="false">Activity</button>
-        <button class="tb-nav-tab" data-tab="waterfall" role="tab" aria-selected="false">Waterfall</button>
-        <button class="tb-nav-tab" data-tab="graph" role="tab" aria-selected="false">Graph</button>
       </div>
     </div>
     <div class="tb-right">
@@ -52,15 +43,91 @@
         <button id="cmd-hint" title="Command Palette (Ctrl+K)" aria-label="Command palette">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
         </button>
-        <button id="mute-btn" title="Toggle Sound (M)" aria-label="Toggle sound">&#128264;</button>
-        <input id="volume-slider" type="range" min="0" max="100" value="30" title="Volume" aria-label="Volume" step="1">
-        <select id="theme-select" title="Select Theme" aria-label="Select theme">
-          <option value="office">Office</option>
-          <option value="space">Space</option>
-          <option value="castle">Castle</option>
-          <option value="cyberpunk">Cyberpunk</option>
-        </select>
-        <button id="shortcuts-btn" title="Keyboard Shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Left Sidebar Navigation -->
+  <div id="sidebar">
+    <nav class="sb-nav">
+      <!-- Primary -->
+      <div class="sb-section">
+        <button class="sb-item active" data-tab="monitor">
+          <svg class="sb-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          <span class="sb-label">Monitor</span>
+        </button>
+      </div>
+
+      <!-- Observe -->
+      <div class="sb-section">
+        <div class="sb-section-title">OBSERVE</div>
+        <button class="sb-item" data-tab="activity">
+          <svg class="sb-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+          <span class="sb-label">Activity</span>
+          <span class="sb-shortcut">V</span>
+        </button>
+        <button class="sb-item" data-tab="waterfall">
+          <svg class="sb-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 7h2v10H7V7zm4 4h2v6h-2v-6zm4-2h2v8h-2V9z"/></svg>
+          <span class="sb-label">Waterfall</span>
+          <span class="sb-shortcut">W</span>
+        </button>
+        <button class="sb-item" data-tab="toolchain">
+          <svg class="sb-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+          <span class="sb-label">Tool Chains</span>
+          <span class="sb-shortcut">C</span>
+        </button>
+      </div>
+
+      <!-- Analyze -->
+      <div class="sb-section">
+        <div class="sb-section-title">ANALYZE</div>
+        <button class="sb-item" data-tab="analytics">
+          <svg class="sb-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+          <span class="sb-label">Analytics</span>
+          <span class="sb-shortcut">A</span>
+        </button>
+        <button class="sb-item" data-tab="leaderboard">
+          <svg class="sb-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 21H2V9h5.5v12zm7.25-18h-5.5v18h5.5V3zM22 11h-5.5v10H22V11z"/></svg>
+          <span class="sb-label">Leaderboard</span>
+          <span class="sb-shortcut">L</span>
+        </button>
+        <button class="sb-item" data-tab="taskgraph">
+          <svg class="sb-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM8 15h8v2H8v-2zm0-4h8v2H8v-2z"/></svg>
+          <span class="sb-label">Tasks</span>
+          <span class="sb-shortcut">G</span>
+        </button>
+        <button class="sb-item" data-tab="graph">
+          <svg class="sb-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.89 8.11C15.5 7.72 14.83 7 13.53 7c-1.86 0-2.97 1.45-2.97 3.09 0 1.36.46 2.13 2.2 3.72.46.43.9.82 1.25 1.19.35-.37.79-.76 1.25-1.19 1.74-1.59 2.2-2.36 2.2-3.72 0-.66-.13-1.28-.5-1.8l1.04-1.04V4h-3.26l-1.04 1.04c-.52-.37-1.14-.5-1.8-.5-1.64 0-3.09 1.11-3.09 2.97 0 1.3.72 1.97 1.11 2.36L12 11.76l1.89-1.89zM12 20l-1.77-1.63C6.19 14.68 2 11.11 2 6.5 2 3.42 4.42 1 7.5 1c1.74 0 3.41.81 4.5 2.09C13.09 1.81 14.76 1 16.5 1 19.58 1 22 3.42 22 6.5c0 4.61-4.19 8.18-8.23 11.87L12 20z"/></svg>
+          <span class="sb-label">Agent Graph</span>
+          <span class="sb-shortcut">R</span>
+        </button>
+      </div>
+    </nav>
+
+    <div class="sb-footer">
+      <div class="sb-footer-controls">
+        <button id="mute-btn" class="sb-footer-btn" title="Toggle Sound (M)" aria-label="Toggle sound">
+          <svg class="sb-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+          <span class="sb-label">Sound</span>
+        </button>
+        <input id="volume-slider" type="range" min="0" max="100" value="30" title="Volume" aria-label="Volume" step="1" class="sb-volume">
+      </div>
+      <div class="sb-footer-controls">
+        <div class="sb-theme-row">
+          <svg class="sb-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-1 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+          <select id="theme-select" title="Select Theme" aria-label="Select theme" class="sb-theme-select">
+            <option value="office">Office</option>
+            <option value="space">Space</option>
+            <option value="castle">Castle</option>
+            <option value="cyberpunk">Cyberpunk</option>
+          </select>
+        </div>
+      </div>
+      <div class="sb-footer-controls">
+        <button id="shortcuts-btn" class="sb-footer-btn" title="Keyboard Shortcuts (?)" aria-label="Keyboard shortcuts">
+          <svg class="sb-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
+          <span class="sb-label">Shortcuts</span>
+        </button>
       </div>
     </div>
   </div>
@@ -71,7 +138,7 @@
     <button class="fi-stop" id="focus-stop">Stop Following</button>
   </div>
   <div id="app-layout">
-    <div id="canvas-container">
+    <div id="canvas-container" class="with-sidebar">
       <div id="app"></div>
       <div id="zoom-controls">
         <button id="zoom-in" title="Zoom In" aria-label="Zoom in">

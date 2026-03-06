@@ -14,6 +14,7 @@ import { AnalyticsPanel } from './ui/analytics-panel.js';
 import { LayoutEditor, applySavedLayout } from './ui/layout-editor.js';
 import { TopBar } from './ui/top-bar.js';
 import type { NavTab } from './ui/top-bar.js';
+import { Sidebar } from './ui/sidebar.js';
 import { ToastManager } from './ui/toast-manager.js';
 import { ShortcutsHelp } from './ui/shortcuts-help.js';
 import { SessionExport } from './ui/session-export.js';
@@ -65,6 +66,9 @@ async function main() {
 
   // ── Top Bar ──
   const topBar = new TopBar(store);
+
+  // ── Sidebar Navigation ──
+  const sidebar = new Sidebar();
 
   // ── Right Panel: Overlay (agent list) ──
   const overlay = new Overlay(store);
@@ -283,8 +287,8 @@ async function main() {
     }
   }
 
-  // Tab switching
-  topBar.setTabChangeHandler((tab: NavTab) => {
+  // Tab switching (sidebar is primary nav, topBar still manages stats)
+  sidebar.setTabChangeHandler((tab: NavTab) => {
     switchRightPanel(tab);
   });
 
@@ -328,9 +332,9 @@ async function main() {
         break;
       case 'toggle-analytics':
         if (currentTab === 'analytics') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('analytics');
+          sidebar.setActiveTab('analytics');
         }
         break;
       case 'timeline-live':
@@ -362,9 +366,9 @@ async function main() {
         break;
       case 'toggle-leaderboard':
         if (currentTab === 'leaderboard') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('leaderboard');
+          sidebar.setActiveTab('leaderboard');
         }
         break;
       case 'cycle-theme':
@@ -375,37 +379,37 @@ async function main() {
         break;
       case 'toggle-toolchain':
         if (currentTab === 'toolchain') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('toolchain');
+          sidebar.setActiveTab('toolchain');
         }
         break;
       case 'toggle-taskgraph':
         if (currentTab === 'taskgraph') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('taskgraph');
+          sidebar.setActiveTab('taskgraph');
         }
         break;
       case 'toggle-activity':
         if (currentTab === 'activity') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('activity');
+          sidebar.setActiveTab('activity');
         }
         break;
       case 'toggle-waterfall':
         if (currentTab === 'waterfall') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('waterfall');
+          sidebar.setActiveTab('waterfall');
         }
         break;
       case 'toggle-graph':
         if (currentTab === 'graph') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('graph');
+          sidebar.setActiveTab('graph');
         }
         break;
     }
@@ -483,9 +487,9 @@ async function main() {
     switch (e.key) {
       case 'a':
         if (currentTab === 'analytics') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('analytics');
+          sidebar.setActiveTab('analytics');
         }
         break;
       case 'h':
@@ -532,9 +536,9 @@ async function main() {
         break;
       case 'l':
         if (currentTab === 'leaderboard') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('leaderboard');
+          sidebar.setActiveTab('leaderboard');
         }
         break;
       case 'p':
@@ -545,38 +549,41 @@ async function main() {
         break;
       case 'c':
         if (currentTab === 'toolchain') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('toolchain');
+          sidebar.setActiveTab('toolchain');
         }
         break;
       case 'g':
         if (currentTab === 'taskgraph') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('taskgraph');
+          sidebar.setActiveTab('taskgraph');
         }
         break;
       case 'v':
         if (currentTab === 'activity') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('activity');
+          sidebar.setActiveTab('activity');
         }
         break;
       case 'w':
         if (currentTab === 'waterfall') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('waterfall');
+          sidebar.setActiveTab('waterfall');
         }
         break;
       case 'r':
         if (currentTab === 'graph') {
-          topBar.setActiveTab('monitor');
+          sidebar.setActiveTab('monitor');
         } else {
-          topBar.setActiveTab('graph');
+          sidebar.setActiveTab('graph');
         }
+        break;
+      case '[':
+        sidebar.toggle();
         break;
     }
   });

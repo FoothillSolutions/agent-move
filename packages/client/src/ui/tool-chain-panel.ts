@@ -64,6 +64,9 @@ export class ToolChainPanel {
 
     // ── Tool frequency summary ──
     html += `<div class="tc-section"><div class="tc-section-title">Tool Usage <span class="tc-hint">(${totalCalls} total calls)</span></div>`;
+    if (hasOutcomes) {
+      html += `<div class="tc-col-header"><span class="tc-col-name">Tool</span><span class="tc-col-mid"></span><span class="tc-col-count">Calls</span><span class="tc-col-status">Status</span><span class="tc-col-avg">Avg</span></div>`;
+    }
     html += '<div class="tc-tools">';
     for (const [tool, count] of sortedTools) {
       const pct = (count / maxFreq) * 100;
@@ -85,17 +88,17 @@ export class ToolChainPanel {
       }
       html += `</div>`;
       html += `<span class="tc-tool-count">${count}</span>`;
-      // Outcome badge
-      if (hasOutcomes && outcomes > 0) {
-        if (failRate > 0) {
-          html += `<span class="tc-outcome tc-outcome-fail" title="${failures} failed">${Math.round(failRate * 100)}% fail</span>`;
-        } else {
-          html += `<span class="tc-outcome tc-outcome-ok" title="${successes} succeeded">✓</span>`;
-        }
+      // Outcome badge — always render slot for consistent width
+      if (hasOutcomes && outcomes > 0 && failRate > 0) {
+        html += `<span class="tc-outcome tc-outcome-fail" title="${failures} failed">${Math.round(failRate * 100)}%</span>`;
+      } else if (hasOutcomes && outcomes > 0) {
+        html += `<span class="tc-outcome tc-outcome-ok" title="${successes} succeeded">\u2713</span>`;
+      } else if (hasOutcomes) {
+        html += `<span class="tc-outcome"></span>`;
       }
-      // Duration badge
-      if (avgMs !== undefined) {
-        html += `<span class="tc-duration">${this.fmtMs(avgMs)}</span>`;
+      // Avg duration — always render slot for consistent width
+      if (hasOutcomes) {
+        html += `<span class="tc-duration" title="avg per call">${avgMs !== undefined ? this.fmtMs(avgMs) : '\u2014'}</span>`;
       }
       html += `</div>`;
     }
