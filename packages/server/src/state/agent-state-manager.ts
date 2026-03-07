@@ -3,7 +3,7 @@ import type { AgentState, AgentEvent, AgentPhase, ZoneId, ActivityEntry, Timelin
 import { getZoneForTool, getProjectColorIndex } from '@agent-move/shared';
 import { config } from '../config.js';
 import type { ParsedActivity } from '../watcher/jsonl-parser.js';
-import type { SessionInfo } from '../watcher/claude-paths.js';
+import type { SessionInfo } from '../watcher/session-info.js';
 import { getGitBranch } from '../watcher/git-info.js';
 import { AnomalyDetector } from './anomaly-detector.js';
 import { ToolChainTracker } from './tool-chain-tracker.js';
@@ -319,9 +319,10 @@ export class AgentStateManager extends EventEmitter {
     // --- Handle new session ---
     if (!agent) {
       // Use parentSessionId from path when available (precise), fallback to project-wide search
+      const parentSessionId = activity.parentSessionId ?? sessionInfo.parentSessionId;
       const parentId = sessionInfo.isSubagent
-        ? (sessionInfo.parentSessionId
-            ? this.resolveAgentId(sessionInfo.parentSessionId)
+        ? (parentSessionId
+            ? this.resolveAgentId(parentSessionId)
             : findParentId(this.agents, sessionInfo.projectDir))
         : null;
 
@@ -369,8 +370,8 @@ export class AgentStateManager extends EventEmitter {
         id: sessionId,
         sessionId,
         rootSessionId,
-        projectPath: sessionInfo.projectPath,
-        projectName: sessionInfo.projectName,
+        projectPath: activity.projectPath ?? sessionInfo.projectPath,
+        projectName: activity.projectName ?? sessionInfo.projectName,
         agentName,
         role,
         parentId,
@@ -470,6 +471,12 @@ export class AgentStateManager extends EventEmitter {
 
     if (activity.model) {
       agent.model = activity.model;
+    }
+    if (activity.projectPath) {
+      agent.projectPath = activity.projectPath;
+    }
+    if (activity.projectName) {
+      agent.projectName = activity.projectName;
     }
 
     processToolActivity(this.activityDeps, agent, activity, now);

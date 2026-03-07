@@ -26,7 +26,7 @@ npx @foothill/agent-move@latest
 
 ## What You're Looking At
 
-AgentMove reads AI coding agent session files and maps every tool call to one of **9 activity zones**. Each agent gets a unique pixel-art character that physically walks between zones as it works.
+AgentMove reads local agent session data from **Claude Code**, **Codex**, **PI**, and **OpenCode** and maps every tool call to one of **9 activity zones**. Each agent gets a unique pixel-art character that physically walks between zones as it works.
 
 It uses a **hybrid data pipeline** — JSONL file watching for rich data (tokens, costs, full text) combined with Claude Code hooks for precise lifecycle events (session start/end, tool success/failure, permissions).
 
@@ -47,7 +47,12 @@ It uses a **hybrid data pipeline** — JSONL file watching for rich data (tokens
 ### Prerequisites
 
 - **Node.js 18+**
-- **Claude Code** installed and used at least once (so `~/.claude/` exists)
+- **`sqlite3` CLI** available if you want OpenCode session support
+- At least one supported agent installed and used at least once:
+  - **Claude Code** (`~/.claude/projects/**/*.jsonl`)
+  - **Codex** (`~/.codex/sessions/**/*.jsonl`)
+  - **PI** (`~/.pi/agent/sessions/**/*.jsonl`)
+  - **OpenCode** (`~/.local/share/opencode/opencode.db`)
 - Works on **Windows**, **macOS**, and **Linux**
 
 ### One Command

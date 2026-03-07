@@ -64,7 +64,7 @@ export async function main() {
   // Build and start all agent watchers
   // To add a new agent type: implement AgentWatcher and push it here
   const watchers: AgentWatcher[] = [
-    new FileWatcher(config.claudeHome, stateManager),
+    new FileWatcher(stateManager),
     ...(config.enableOpenCode ? [new OpenCodeWatcher(stateManager)] : []),
   ];
   for (const w of watchers) {

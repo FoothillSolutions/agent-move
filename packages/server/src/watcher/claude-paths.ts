@@ -1,16 +1,7 @@
 import { basename, dirname, sep } from 'path';
 import { existsSync } from 'fs';
 import { join } from 'path';
-
-export interface SessionInfo {
-  projectPath: string;
-  projectName: string;
-  isSubagent: boolean;
-  /** The encoded project directory (shared by main + subagents of the same project) */
-  projectDir: string;
-  /** The parent session ID extracted from the path (for subagents) */
-  parentSessionId: string | null;
-}
+import type { SessionInfo } from './session-info.js';
 
 class ClaudePaths {
   /**
@@ -26,6 +17,7 @@ class ClaudePaths {
     const projectsIdx = parts.indexOf('projects');
     if (projectsIdx === -1 || projectsIdx + 1 >= parts.length) {
       return {
+        provider: 'claude',
         projectPath: 'unknown',
         projectName: 'Unknown',
         isSubagent: false,
@@ -47,6 +39,7 @@ class ClaudePaths {
     const parentSessionId = isSubagent ? parts[projectsIdx + 2] : null;
 
     return {
+      provider: 'claude',
       projectPath: encodedProjectName,
       projectName,
       isSubagent,

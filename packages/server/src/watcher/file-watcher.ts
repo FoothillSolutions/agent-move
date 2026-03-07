@@ -1,37 +1,29 @@
 import chokidar from 'chokidar';
 import { stat, open } from 'fs/promises';
-import { join, basename } from 'path';
 import type { AgentStateManager } from '../state/agent-state-manager.js';
 import { JsonlParser } from './jsonl-parser.js';
-import { claudePaths } from './claude-paths.js';
+import { FILE_SESSION_SOURCES, getFileSessionSource } from './file-session-sources.js';
 import { SessionScanner } from './session-scanner.js';
 import type { AgentWatcher } from './agent-watcher.js';
 
 export class FileWatcher implements AgentWatcher {
   private watcher: chokidar.FSWatcher | null = null;
   private byteOffsets = new Map<string, number>();
+  private sessionIds = new Map<string, string>();
   private parser = new JsonlParser();
   /** Per-file lock to prevent concurrent processFile calls for the same file */
   private fileLocks = new Map<string, Promise<void>>();
 
-  constructor(
-    private claudeHome: string,
-    private stateManager: AgentStateManager
-  ) {}
+  constructor(private stateManager: AgentStateManager) {}
 
   async start(): Promise<void> {
-    // Scan and replay recently-active session files on startup
-    const scanner = new SessionScanner(this.claudeHome);
+    const scanner = new SessionScanner();
     const existingFiles = await scanner.scan();
-
-    // Process existing files sequentially — main session must be processed
-    // before subagent files so parent relationships resolve correctly
-    for (const file of existingFiles) {
-      await this.processFile(file);
+    for (const filePath of existingFiles) {
+      await this.doProcessFile(filePath);
     }
 
-    const pattern = join(this.claudeHome, 'projects', '**', '*.jsonl');
-    this.watcher = chokidar.watch(pattern, {
+    this.watcher = chokidar.watch(FILE_SESSION_SOURCES.map((source) => source.watchPattern), {
       persistent: true,
       ignoreInitial: true,
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
@@ -46,11 +38,13 @@ export class FileWatcher implements AgentWatcher {
       this.processFile(filePath);
     });
 
-    console.log(`Watching for JSONL files in ${this.claudeHome}/projects/`);
+    for (const source of FILE_SESSION_SOURCES) {
+      console.log(`Watching ${source.provider} session files in ${source.rootDir}`);
+    }
   }
 
   stop(): void {
-    this.watcher?.close();
+    void this.watcher?.close();
     this.byteOffsets.clear();
     this.fileLocks.clear();
   }
@@ -70,13 +64,15 @@ export class FileWatcher implements AgentWatcher {
   }
 
   private async doProcessFile(filePath: string) {
+    const source = getFileSessionSource(filePath);
+    if (!source) return;
+
     try {
       const fileStats = await stat(filePath);
       const currentOffset = this.byteOffsets.get(filePath) ?? 0;
 
       if (fileStats.size <= currentOffset) return;
 
-      // Read only new bytes
       const handle = await open(filePath, 'r');
       try {
         const buffer = Buffer.alloc(fileStats.size - currentOffset);
@@ -85,29 +81,30 @@ export class FileWatcher implements AgentWatcher {
 
         const newContent = buffer.toString('utf-8');
         const lines = newContent.split('\n').filter((l) => l.trim());
-
-        const sessionId = basename(filePath, '.jsonl');
-        const sessionInfo = claudePaths.parseSessionPath(filePath);
+        let fallbackSessionId = this.sessionIds.get(filePath) ?? source.getSessionId(filePath);
+        const sessionInfo = source.parseSessionPath(filePath);
 
         let hadParsedActivity = false;
         for (const line of lines) {
-          const parsed = this.parser.parseLine(line);
-          if (parsed) {
-            hadParsedActivity = true;
-            this.stateManager.processMessage(sessionId, parsed, sessionInfo);
+          const parsed = this.parser.parseLine(line, source.provider);
+          if (!parsed) continue;
+
+          hadParsedActivity = true;
+          if (parsed.sessionId) {
+            fallbackSessionId = parsed.sessionId;
+            this.sessionIds.set(filePath, parsed.sessionId);
           }
+          const sessionId = parsed.sessionId ?? fallbackSessionId;
+          this.stateManager.processMessage(sessionId, parsed, sessionInfo);
         }
 
-        // If the file grew but no parsed activities (e.g. tool results, system
-        // messages), send a heartbeat so pending-tool agents stay alive.
         if (!hadParsedActivity && lines.length > 0) {
-          this.stateManager.heartbeat(sessionId);
+          this.stateManager.heartbeat(fallbackSessionId);
         }
       } finally {
         await handle.close();
       }
     } catch (err) {
-      // File may have been deleted or is being written to
       if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
         console.error(`Error processing ${filePath}:`, err);
       }
