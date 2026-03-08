@@ -1,6 +1,6 @@
 {
   "name": "agent-move",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Watch your AI coding agents come alive as pixel-art characters in a 2D world",
   "type": "module",
   "engines": {
