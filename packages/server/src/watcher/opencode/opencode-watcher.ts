@@ -2,12 +2,14 @@ import chokidar from 'chokidar';
 import Database from 'better-sqlite3';
 import type { AgentStateManager } from '../../state/agent-state-manager.js';
 import type { SessionInfo } from '../claude-paths.js';
+import { config } from '../../config.js';
 import {
   getOpenCodeDbPath,
   parseOpenCodeSession,
   type OpenCodeSessionRow,
 } from './opencode-paths.js';
 import { OpenCodeParser, type OpenCodeMessageData } from './opencode-parser.js';
+import type { AgentWatcher } from '../agent-watcher.js';
 
 interface MessageRow {
   id: string;
@@ -34,7 +36,7 @@ interface PartRow {
  *   3. Watch the WAL file (opencode.db-wal) with chokidar — it changes on every write.
  *   4. On each notification, query rows with time_updated > lastSeenTs.
  */
-export class OpenCodeWatcher {
+export class OpenCodeWatcher implements AgentWatcher {
   private watcher: chokidar.FSWatcher | null = null;
   private db: Database.Database | null = null;
   private parser = new OpenCodeParser();
@@ -63,7 +65,8 @@ export class OpenCodeWatcher {
 
   constructor(private stateManager: AgentStateManager) {}
 
-  async start(activeThresholdMs: number) {
+  async start(): Promise<void> {
+    const activeThresholdMs = config.activeThresholdMs;
     const dbPath = getOpenCodeDbPath();
     if (!dbPath) {
       console.log('[opencode] No database found — OpenCode not installed or not yet used');
@@ -104,6 +107,7 @@ export class OpenCodeWatcher {
     });
 
     this.watcher.on('change', () => this.poll());
+    this.watcher.on('add', () => this.poll());
 
     console.log('[opencode] Watching for new activity');
   }

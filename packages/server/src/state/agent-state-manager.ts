@@ -790,7 +790,7 @@ export class AgentStateManager extends EventEmitter {
     if (!agent || this.hiddenAgents.has(canonicalId)) return;
 
     agent.phase = phase;
-    if (phase === 'running') {
+    if (phase === 'running' || phase === 'compacting') {
       agent.isIdle = false;
       agent.isDone = false;
       agent.lastActivityAt = Date.now();

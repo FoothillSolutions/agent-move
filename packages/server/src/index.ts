@@ -5,8 +5,8 @@ import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import { config } from './config.js';
+import type { AgentWatcher } from './watcher/agent-watcher.js';
 import { FileWatcher } from './watcher/file-watcher.js';
-import { SessionScanner } from './watcher/session-scanner.js';
 import { OpenCodeWatcher } from './watcher/opencode/opencode-watcher.js';
 import { AgentStateManager } from './state/agent-state-manager.js';
 import { Broadcaster } from './ws/broadcaster.js';
@@ -61,21 +61,14 @@ export async function main() {
     reply.sendFile('index.html');
   });
 
-  // Scan for existing active sessions on startup
-  const scanner = new SessionScanner(config.claudeHome);
-  const existingSessions = await scanner.scan();
-  console.log(`Found ${existingSessions.length} existing session files`);
-
-  // Start Claude Code file watcher
-  const watcher = new FileWatcher(config.claudeHome, stateManager);
-  await watcher.start(existingSessions);
-
-  // Start OpenCode watcher (no-op if OpenCode is not installed)
-  const openCodeWatcher = config.enableOpenCode
-    ? new OpenCodeWatcher(stateManager)
-    : null;
-  if (openCodeWatcher) {
-    await openCodeWatcher.start(config.activeThresholdMs);
+  // Build and start all agent watchers
+  // To add a new agent type: implement AgentWatcher and push it here
+  const watchers: AgentWatcher[] = [
+    new FileWatcher(config.claudeHome, stateManager),
+    ...(config.enableOpenCode ? [new OpenCodeWatcher(stateManager)] : []),
+  ];
+  for (const w of watchers) {
+    await w.start();
   }
 
   // Flush stale pending queues from replay — only real-time Agent tool calls should name subagents
@@ -100,8 +93,7 @@ export async function main() {
   // Graceful shutdown
   const shutdown = async () => {
     console.log('Shutting down...');
-    watcher.stop();
-    openCodeWatcher?.stop();
+    for (const w of watchers) w.stop();
     hookManager.dispose();
     broadcaster.dispose();
     stateManager.dispose();

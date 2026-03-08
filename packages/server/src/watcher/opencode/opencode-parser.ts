@@ -1,4 +1,5 @@
 import type { ParsedActivity } from '../jsonl-parser.js';
+import { normalizeToolName, normalizeToolInput } from '@agent-move/shared';
 
 // ── OpenCode message data (serialised in message.data column) ─────────────────
 
@@ -47,7 +48,11 @@ type Part = ToolPart | TextPart | ReasoningPart | { type: string };
 export class OpenCodeParser {
   /**
    * Convert an OpenCode part JSON object into a ParsedActivity.
-   * Returns null for parts that carry no actionable activity (step markers, reasoning, etc).
+   * All tool names and input field names are normalized to canonical form
+   * so downstream code (activity-processor, TOOL_ZONE_MAP, etc.) needs no
+   * agent-specific branches.
+   *
+   * Returns null for parts that carry no actionable activity.
    */
   parsePart(partData: Part, messageData?: OpenCodeMessageData): ParsedActivity | null {
     if (partData.type === 'tool') {
@@ -56,10 +61,11 @@ export class OpenCodeParser {
       // the final 'completed' state if the tool finished before the next poll.
       if (tool.state.status === 'pending') return null;
 
+      const rawInput = tool.state.input ?? {};
       return {
         type: 'tool_use',
-        toolName: tool.tool,
-        toolInput: tool.state.input,
+        toolName: normalizeToolName(tool.tool),
+        toolInput: normalizeToolInput(rawInput),
         agentName: messageData?.agent,
         model: messageData?.modelID,
       };
@@ -80,7 +86,7 @@ export class OpenCodeParser {
     }
 
     // Reasoning = agent is thinking between tool calls → move to thinking zone.
-    // Emit as a tool_use with toolName 'thinking' which maps to the thinking zone
+    // Emit as tool_use with toolName 'thinking' which maps to the thinking zone
     // via the default fallback in getZoneForTool().
     if (partData.type === 'reasoning') {
       const reasoning = partData as ReasoningPart;

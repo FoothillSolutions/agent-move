@@ -1,6 +1,6 @@
 import { Application } from 'pixi.js';
 import type { AgentState, ZoneId } from '@agent-move/shared';
-import { AGENT_PALETTES, ZONE_MAP, getFunnyName } from '@agent-move/shared';
+import { AGENT_PALETTES, ZONE_MAP, getFunnyName, getContextWindow } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 import type { WorldManager } from '../world/world-manager.js';
 import { AgentSprite } from './agent-sprite.js';
@@ -182,9 +182,8 @@ export class AgentManager {
     this.notifications?.notifySpawn(displayName);
   }
 
-  /** Context window size for Claude models (all current models = 200k tokens) */
-  private getContextWindowSize(_model: string | null): number {
-    return 200_000;
+  private getContextWindowSize(model: string | null): number {
+    return getContextWindow(model);
   }
 
   private onUpdate(agent: AgentState): void {

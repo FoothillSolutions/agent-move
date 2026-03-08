@@ -4,8 +4,10 @@ import { join, basename } from 'path';
 import type { AgentStateManager } from '../state/agent-state-manager.js';
 import { JsonlParser } from './jsonl-parser.js';
 import { claudePaths } from './claude-paths.js';
+import { SessionScanner } from './session-scanner.js';
+import type { AgentWatcher } from './agent-watcher.js';
 
-export class FileWatcher {
+export class FileWatcher implements AgentWatcher {
   private watcher: chokidar.FSWatcher | null = null;
   private byteOffsets = new Map<string, number>();
   private parser = new JsonlParser();
@@ -17,7 +19,11 @@ export class FileWatcher {
     private stateManager: AgentStateManager
   ) {}
 
-  async start(existingFiles: string[]) {
+  async start(): Promise<void> {
+    // Scan and replay recently-active session files on startup
+    const scanner = new SessionScanner(this.claudeHome);
+    const existingFiles = await scanner.scan();
+
     // Process existing files sequentially — main session must be processed
     // before subagent files so parent relationships resolve correctly
     for (const file of existingFiles) {
@@ -43,7 +49,7 @@ export class FileWatcher {
     console.log(`Watching for JSONL files in ${this.claudeHome}/projects/`);
   }
 
-  stop() {
+  stop(): void {
     this.watcher?.close();
     this.byteOffsets.clear();
     this.fileLocks.clear();

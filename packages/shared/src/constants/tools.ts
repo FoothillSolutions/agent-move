@@ -5,6 +5,7 @@ export const TOOL_ICONS: Record<string, string> = {
   Read: '\u{1F4D6}',       // open book
   Write: '\u{270F}\uFE0F', // pencil
   Edit: '\u{1F527}',       // wrench
+  Patch: '\u{1F527}',      // wrench (unified diff)
   Bash: '\u{1F4BB}',       // terminal
   Glob: '\u{1F50D}',       // search
   Grep: '\u{1F50E}',       // search right
@@ -15,38 +16,32 @@ export const TOOL_ICONS: Record<string, string> = {
   SendMessage: '\u{1F4AC}',// speech
   TaskCreate: '\u{1F4CB}', // clipboard
   TaskUpdate: '\u{2705}',  // check
+  TodoRead: '\u{1F4CB}',   // clipboard
+  TodoWrite: '\u{2705}',   // check
   AskUserQuestion: '\u{2753}', // question
   EnterPlanMode: '\u{1F4DD}',  // memo
   ExitPlanMode: '\u{1F4DD}',   // memo
 };
 
-/** Maps Claude Code tool names to activity zones */
+/** Maps canonical tool names to activity zones */
 export const TOOL_ZONE_MAP: Record<string, ZoneId> = {
   // Files zone
   Read: 'files',
   Write: 'files',
   Edit: 'files',
+  Patch: 'files',
   Glob: 'files',
   NotebookEdit: 'files',
-  // OpenCode equivalents (lowercase)
-  read: 'files',
-  write: 'files',
-  edit: 'files',
-  glob: 'files',
 
   // Terminal zone
   Bash: 'terminal',
-  bash: 'terminal',
 
   // Search zone
   Grep: 'search',
   WebSearch: 'search',
-  grep: 'search',
-  websearch: 'search',
 
   // Web zone
   WebFetch: 'web',
-  webfetch: 'web',
   mcp__chrome_devtools__navigate_page: 'web',
   mcp__chrome_devtools__click: 'web',
   mcp__chrome_devtools__fill: 'web',
@@ -67,9 +62,8 @@ export const TOOL_ZONE_MAP: Record<string, ZoneId> = {
   TaskUpdate: 'tasks',
   TaskList: 'tasks',
   TaskGet: 'tasks',
-  // OpenCode todo tools
-  todoread: 'tasks',
-  todowrite: 'tasks',
+  TodoRead: 'tasks',
+  TodoWrite: 'tasks',
 
   // Spawn zone
   Agent: 'spawn',
@@ -82,4 +76,47 @@ export function getZoneForTool(toolName: string): ZoneId {
   // Handle MCP tools with varying names — all route to web zone
   if (toolName.startsWith('mcp__')) return 'web';
   return TOOL_ZONE_MAP[toolName] ?? 'thinking';
+}
+
+/**
+ * Agent-specific tool name → canonical PascalCase name.
+ * Each agent parser calls normalizeToolName() before emitting ParsedActivity,
+ * so the rest of the pipeline only ever sees canonical names.
+ */
+const TOOL_NAME_MAP: Record<string, string> = {
+  // OpenCode lowercase → canonical PascalCase
+  read: 'Read',
+  write: 'Write',
+  edit: 'Edit',
+  patch: 'Patch',
+  glob: 'Glob',
+  bash: 'Bash',
+  grep: 'Grep',
+  websearch: 'WebSearch',
+  webfetch: 'WebFetch',
+  todoread: 'TodoRead',
+  todowrite: 'TodoWrite',
+};
+
+/** Normalize an agent-specific tool name to the canonical form. */
+export function normalizeToolName(name: string): string {
+  return TOOL_NAME_MAP[name] ?? name;
+}
+
+/**
+ * Normalize agent-specific tool input field names to snake_case.
+ * Called by each agent parser so activity-processor always receives snake_case.
+ */
+export function normalizeToolInput(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!('filePath' in input) && !('oldString' in input) && !('newString' in input) && !('replaceAll' in input)) {
+    return input;
+  }
+  const out = { ...input };
+  if ('filePath' in out)  { out.file_path  = out.filePath;  delete out.filePath; }
+  if ('oldString' in out) { out.old_string = out.oldString; delete out.oldString; }
+  if ('newString' in out) { out.new_string = out.newString; delete out.newString; }
+  if ('replaceAll' in out) { out.replace_all = out.replaceAll; delete out.replaceAll; }
+  return out;
 }

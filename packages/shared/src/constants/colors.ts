@@ -43,34 +43,130 @@ export interface ModelPricing {
   output: number;
 }
 
+// ─── Pricing table (USD per million tokens) ──────────────────────────────────
+// Sources: official provider pricing pages (as of mid-2025).
+// Use getModelPricing() for lookups — it handles prefix/fuzzy matching.
+
 export const MODEL_PRICING: Record<string, ModelPricing> = {
-  'claude-opus-4-6': { input: 15, output: 75 },
-  'claude-opus-4-5-20250620': { input: 15, output: 75 },
-  'claude-sonnet-4-6': { input: 3, output: 15 },
-  'claude-sonnet-4-5-20250514': { input: 3, output: 15 },
-  'claude-sonnet-4-0-20250514': { input: 3, output: 15 },
-  'claude-haiku-4-5-20251001': { input: 1, output: 5 },
-  'claude-3-5-sonnet-20241022': { input: 3, output: 15 },
-  'claude-3-5-haiku-20241022': { input: 1, output: 5 },
+  // ── Anthropic Claude ────────────────────────────────────────────────────────
+  'claude-opus-4-6':           { input: 15,    output: 75    },
+  'claude-opus-4-5-20250620':  { input: 15,    output: 75    },
+  'claude-sonnet-4-6':         { input: 3,     output: 15    },
+  'claude-sonnet-4-5-20250514':{ input: 3,     output: 15    },
+  'claude-sonnet-4-0-20250514':{ input: 3,     output: 15    },
+  'claude-haiku-4-5-20251001': { input: 1,     output: 5     },
+  'claude-3-7-sonnet-20250219':{ input: 3,     output: 15    },
+  'claude-3-5-sonnet-20241022':{ input: 3,     output: 15    },
+  'claude-3-5-haiku-20241022': { input: 1,     output: 5     },
+  'claude-3-opus-20240229':    { input: 15,    output: 75    },
+
+  // ── OpenAI ──────────────────────────────────────────────────────────────────
+  'gpt-4o':                    { input: 2.5,   output: 10    },
+  'gpt-4o-mini':               { input: 0.15,  output: 0.6   },
+  'gpt-4-turbo':               { input: 10,    output: 30    },
+  'gpt-4':                     { input: 30,    output: 60    },
+  'o1':                        { input: 15,    output: 60    },
+  'o1-mini':                   { input: 1.1,   output: 4.4   },
+  'o3':                        { input: 10,    output: 40    },
+  'o3-mini':                   { input: 1.1,   output: 4.4   },
+  'o4-mini':                   { input: 1.1,   output: 4.4   },
+
+  // ── Google Gemini ───────────────────────────────────────────────────────────
+  'gemini-2.5-pro':            { input: 1.25,  output: 10    },
+  'gemini-2.5-flash':          { input: 0.15,  output: 0.6   },
+  'gemini-2.0-flash':          { input: 0.1,   output: 0.4   },
+  'gemini-2.0-flash-lite':     { input: 0.075, output: 0.3   },
+  'gemini-1.5-pro':            { input: 1.25,  output: 5     },
+  'gemini-1.5-flash':          { input: 0.075, output: 0.3   },
+
+  // ── DeepSeek ────────────────────────────────────────────────────────────────
+  'deepseek-chat':             { input: 0.27,  output: 1.1   }, // DeepSeek V3
+  'deepseek-reasoner':         { input: 0.55,  output: 2.19  }, // DeepSeek R1
+
+  // ── xAI Grok ────────────────────────────────────────────────────────────────
+  'grok-3':                    { input: 3,     output: 15    },
+  'grok-3-mini':               { input: 0.3,   output: 0.5   },
+  'grok-2':                    { input: 2,     output: 10    },
+
+  // ── Mistral ─────────────────────────────────────────────────────────────────
+  'mistral-large':             { input: 2,     output: 6     },
+  'mistral-small':             { input: 0.1,   output: 0.3   },
+  'codestral':                 { input: 0.1,   output: 0.3   },
 };
 
-/** Default pricing when model is unknown */
+/** Default pricing when model is unknown (mid-range estimate) */
 export const DEFAULT_PRICING: ModelPricing = { input: 3, output: 15 };
+
+/** Context window sizes in tokens for major models */
+const CONTEXT_WINDOWS: Record<string, number> = {
+  // Anthropic (200k across all current Claude models)
+  'claude': 200_000,
+  // OpenAI
+  'gpt-4o': 128_000,
+  'gpt-4o-mini': 128_000,
+  'gpt-4-turbo': 128_000,
+  'gpt-4': 8_192,
+  'o1': 200_000,
+  'o1-mini': 128_000,
+  'o3': 200_000,
+  'o3-mini': 200_000,
+  'o4-mini': 200_000,
+  // Google (1M for Gemini 2.x, 2M for 1.5 Pro — use 1M as display cap)
+  'gemini-2': 1_000_000,
+  'gemini-1.5': 1_000_000,
+  // DeepSeek
+  'deepseek-chat': 64_000,
+  'deepseek-reasoner': 128_000,
+  // xAI
+  'grok-3': 131_072,
+  'grok-2': 131_072,
+  // Mistral
+  'mistral-large': 128_000,
+  'mistral-small': 32_000,
+  'codestral': 256_000,
+};
 
 /** Get pricing for a model string (fuzzy match) */
 export function getModelPricing(model: string | null): ModelPricing {
   if (!model) return DEFAULT_PRICING;
+  const m = model.toLowerCase();
   // Exact match
-  if (MODEL_PRICING[model]) return MODEL_PRICING[model];
-  // Fuzzy: check if model contains a known key
+  if (MODEL_PRICING[m]) return MODEL_PRICING[m];
+  // Prefix/substring match against known keys
   for (const [key, pricing] of Object.entries(MODEL_PRICING)) {
-    if (model.includes(key) || key.includes(model)) return pricing;
+    if (m.startsWith(key) || m.includes(key)) return pricing;
   }
-  // Fuzzy by family name
-  if (model.includes('opus')) return MODEL_PRICING['claude-opus-4-6'];
-  if (model.includes('haiku')) return MODEL_PRICING['claude-haiku-4-5-20251001'];
-  if (model.includes('sonnet')) return MODEL_PRICING['claude-sonnet-4-6'];
+  // Family fallbacks
+  if (m.includes('opus'))    return MODEL_PRICING['claude-opus-4-6'];
+  if (m.includes('haiku'))   return MODEL_PRICING['claude-haiku-4-5-20251001'];
+  if (m.includes('sonnet'))  return MODEL_PRICING['claude-sonnet-4-6'];
+  if (m.includes('o3-mini') || m.includes('o4-mini')) return MODEL_PRICING['o3-mini'];
+  if (m.includes('o1-mini')) return MODEL_PRICING['o1-mini'];
+  if (m.includes('gemini-2.5')) return MODEL_PRICING['gemini-2.5-pro'];
+  if (m.includes('gemini-2'))   return MODEL_PRICING['gemini-2.0-flash'];
+  if (m.includes('gemini'))     return MODEL_PRICING['gemini-1.5-pro'];
+  if (m.includes('gpt-4o'))     return MODEL_PRICING['gpt-4o'];
+  if (m.includes('deepseek'))   return MODEL_PRICING['deepseek-chat'];
+  if (m.includes('grok'))       return MODEL_PRICING['grok-3'];
+  if (m.includes('mistral'))    return MODEL_PRICING['mistral-large'];
   return DEFAULT_PRICING;
+}
+
+/** Get context window size in tokens for a model (fuzzy match, defaults to 200k) */
+export function getContextWindow(model: string | null): number {
+  if (!model) return 200_000;
+  const m = model.toLowerCase();
+  // Exact key match
+  if (CONTEXT_WINDOWS[m]) return CONTEXT_WINDOWS[m];
+  // Prefix match (longest key that m starts with)
+  let best: [string, number] | null = null;
+  for (const [key, size] of Object.entries(CONTEXT_WINDOWS)) {
+    if (m.startsWith(key) || m.includes(key)) {
+      if (!best || key.length > best[0].length) best = [key, size];
+    }
+  }
+  if (best) return best[1];
+  return 200_000;
 }
 
 /** Deterministic hash of project path to a palette index (agents from same project share color) */
