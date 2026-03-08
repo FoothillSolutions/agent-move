@@ -3,13 +3,15 @@ import type { AgentState, ZoneId } from '@agent-move/shared';
 import { AGENT_PALETTES, ZONE_MAP, getFunnyName } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 import type { WorldManager } from '../world/world-manager.js';
-import { AgentSprite, type SpeechMessage } from './agent-sprite.js';
+import { AgentSprite } from './agent-sprite.js';
 import { RelationshipLines } from './relationship-lines.js';
 import { ParticleManager } from '../effects/particle-manager.js';
 import { MessageFlow } from '../effects/message-flow.js';
 import { ZoneGlow } from '../effects/zone-glow.js';
 import type { SoundManager } from '../audio/sound-manager.js';
 import type { NotificationManager } from '../audio/notification-manager.js';
+import { buildSpeechMessages } from './speech-builder.js';
+import { getZonePosition } from './position-manager.js';
 
 interface ManagedAgent {
   sprite: AgentSprite;
@@ -20,27 +22,6 @@ interface ManagedAgent {
   lastSeenOutcome: 'success' | 'failure' | null;
 }
 
-/** Tool name -> icon mapping for speech bubbles */
-const TOOL_ICONS: Record<string, string> = {
-  Read: '\u{1F4D6}',       // open book
-  Write: '\u{270F}\uFE0F', // pencil
-  Edit: '\u{1F527}',       // wrench
-  Bash: '\u{1F4BB}',       // terminal
-  Glob: '\u{1F50D}',       // search
-  Grep: '\u{1F50E}',       // search right
-  WebSearch: '\u{1F310}',  // globe
-  WebFetch: '\u{1F310}',   // globe
-  Agent: '\u{1F916}',      // robot
-  TeamCreate: '\u{1F465}', // people
-  SendMessage: '\u{1F4AC}',// speech
-  TaskCreate: '\u{1F4CB}', // clipboard
-  TaskUpdate: '\u{2705}',  // check
-  AskUserQuestion: '\u{2753}', // question
-  EnterPlanMode: '\u{1F4DD}',  // memo
-  ExitPlanMode: '\u{1F4DD}',   // memo
-};
-
-const AGENT_SPREAD = 60; // spacing between agents in a zone
 
 export class AgentManager {
   private agents = new Map<string, ManagedAgent>();
@@ -138,66 +119,6 @@ export class AgentManager {
     this.store.on('anomaly:alert', this.onAnomalyBound);
   }
 
-  /** Build rich speech messages from agent state */
-  private buildSpeechMessages(agent: AgentState): SpeechMessage[] {
-    const messages: SpeechMessage[] = [];
-
-    // Input-needed check
-    if (agent.currentTool === 'AskUserQuestion') {
-      messages.push({
-        text: 'Waiting for input...',
-        type: 'input-needed',
-        icon: '\u{23F3}',
-      });
-      return messages;
-    }
-
-    // Tool message with details
-    if (agent.currentTool) {
-      const icon = TOOL_ICONS[agent.currentTool] || '\u{2699}\uFE0F';
-      let detail = agent.currentTool;
-
-      // Add file path or command info
-      if (agent.currentActivity) {
-        const activity = agent.currentActivity;
-        // Extract meaningful short form
-        if (activity.length <= 50) {
-          detail = `${agent.currentTool}: ${activity}`;
-        } else {
-          // Try to extract just filename from path
-          const parts = activity.replace(/\\/g, '/').split('/');
-          const shortPath = parts.length > 2
-            ? `.../${parts.slice(-2).join('/')}`
-            : activity.slice(0, 45);
-          detail = `${agent.currentTool}: ${shortPath}`;
-        }
-      }
-
-      messages.push({ text: detail, type: 'tool', icon });
-    }
-
-    // Planning mode indicator (shown alongside tool usage)
-    if (agent.isPlanning && agent.currentTool !== 'EnterPlanMode' && agent.currentTool !== 'ExitPlanMode') {
-      messages.push({
-        text: 'Planning...',
-        type: 'tool',
-        icon: '\u{1F4DD}',
-      });
-    }
-
-
-    // Text/speech message
-    if (agent.speechText) {
-      messages.push({
-        text: agent.speechText,
-        type: 'text',
-        icon: '\u{1F4AD}',
-      });
-    }
-
-    return messages;
-  }
-
   /** Count children for each agent and update badges */
   private updateChildBadges(): void {
     const childCounts = new Map<string, number>();
@@ -249,7 +170,7 @@ export class AgentManager {
     this.world.addAgent(sprite.container);
 
     // Move to the agent's current zone
-    const target = this.getZonePosition(agent.currentZone, agent.id);
+    const target = getZonePosition(agent.currentZone, agent.id, this.agents, this.world);
     sprite.moveTo(target.x, target.y);
 
     this.updateChildBadges();
@@ -271,11 +192,11 @@ export class AgentManager {
     managed.sprite.setCustomName(this.getDisplayName(agent));
 
     // Move to new zone with distributed position
-    const target = this.getZonePosition(agent.currentZone, agent.id);
+    const target = getZonePosition(agent.currentZone, agent.id, this.agents, this.world);
     managed.sprite.moveTo(target.x, target.y);
 
     // Build and show rich speech messages
-    const messages = this.buildSpeechMessages(agent);
+    const messages = buildSpeechMessages(agent);
     if (messages.length > 0) {
       managed.sprite.setSpeech(messages);
     } else {
@@ -376,7 +297,7 @@ export class AgentManager {
     if (!managed) return;
 
     managed.state = agent;
-    const target = this.getZonePosition('idle', agent.id);
+    const target = getZonePosition('idle', agent.id, this.agents, this.world);
     managed.sprite.moveTo(target.x, target.y);
     managed.sprite.setIdle(true);
     managed.sprite.setWaiting(false);
@@ -432,7 +353,7 @@ export class AgentManager {
       // Position immediately (skip walking and spawn animation)
       const managed = this.agents.get(agent.id);
       if (managed) {
-        const target = this.getZonePosition(agent.currentZone, agent.id);
+        const target = getZonePosition(agent.currentZone, agent.id, this.agents, this.world);
         managed.sprite.container.position.set(target.x, target.y);
         managed.sprite.spawnAnimTimer = 0;
         managed.sprite.container.scale.set(1);
@@ -445,55 +366,6 @@ export class AgentManager {
       }
     }
     this.sound = prevSound;
-  }
-
-  /**
-   * Get a distributed position within a zone for an agent.
-   * Arranges agents in a grid pattern to avoid overlapping names.
-   */
-  private getZonePosition(zoneId: ZoneId, agentId: string): { x: number; y: number } {
-    const zone = ZONE_MAP.get(zoneId);
-    if (!zone) return this.world.getZoneCenter(zoneId);
-
-    // Count how many agents are targeting the same zone (including this one)
-    const agentsInZone: string[] = [];
-    for (const [id, managed] of this.agents) {
-      if (managed.state.currentZone === zoneId || (managed.state.isIdle && zoneId === 'idle')) {
-        agentsInZone.push(id);
-      }
-    }
-    // Add self if not yet tracked
-    if (!agentsInZone.includes(agentId)) {
-      agentsInZone.push(agentId);
-    }
-    agentsInZone.sort(); // deterministic order
-
-    const index = agentsInZone.indexOf(agentId);
-    const count = agentsInZone.length;
-
-    // Use zone interior (offset from edges for labels at top)
-    const usableX = zone.width - 40;   // 20px padding each side
-    const usableY = zone.height - 70;  // 50px top for label, 20px bottom
-    const startX = zone.x + 20;
-    const startY = zone.y + 50;
-
-    if (count === 1) {
-      return { x: startX + usableX / 2, y: startY + usableY / 2 };
-    }
-
-    // Grid layout: fit agents into rows
-    const cols = Math.ceil(Math.sqrt(count));
-    const rows = Math.ceil(count / cols);
-    const col = index % cols;
-    const row = Math.floor(index / cols);
-
-    const cellW = usableX / cols;
-    const cellH = usableY / rows;
-
-    return {
-      x: startX + cellW * col + cellW / 2,
-      y: startY + cellH * row + cellH / 2,
-    };
   }
 
   /** Called each frame from the game loop */

@@ -1,25 +1,8 @@
 import type { AgentState, TimelineEvent } from '@agent-move/shared';
 import { AGENT_PALETTES } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
-
-/** Event type categories for filtering */
-type EventCategory = 'tool' | 'zone' | 'idle' | 'lifecycle';
-
-/** Map event types to filter categories */
-function getEventCategory(event: TimelineEvent): EventCategory {
-  switch (event.type) {
-    case 'agent:spawn':
-    case 'agent:shutdown':
-      return 'lifecycle';
-    case 'agent:idle':
-      return 'idle';
-    case 'agent:update': {
-      // If the agent has a currentTool, it's a tool event; otherwise zone change
-      if (event.agent.currentTool) return 'tool';
-      return 'zone';
-    }
-  }
-}
+import { drawPlayhead, drawTimeTicks, getEventCategory, getEventColor, getTickInterval } from './timeline-canvas.js';
+import { TimelineFilter } from './timeline-filter.js';
 
 /**
  * Timeline bar at the bottom of the canvas.
@@ -48,10 +31,8 @@ export class Timeline {
 
   // Expanded swim-lane state
   private expanded = false;
-  private activeFilters = new Set<EventCategory>(['tool', 'zone', 'idle', 'lifecycle']);
-  private visibleAgents = new Set<string>(); // empty = show all
+  private filter: TimelineFilter;
   private filterContainer: HTMLElement;
-  private agentFilterContainer: HTMLElement;
   private swimLabelsEl: HTMLElement;
   private trackWrapper: HTMLElement;
 
@@ -112,11 +93,18 @@ export class Timeline {
     this.timeLabel = this.el.querySelector('#timeline-time')!;
     this.expandBtn = this.el.querySelector('.timeline-expand-btn')! as HTMLButtonElement;
     this.filterContainer = this.el.querySelector('.timeline-filters')!;
-    this.agentFilterContainer = this.el.querySelector('.timeline-agent-filters')!;
+    const agentFilterContainer = this.el.querySelector('.timeline-agent-filters') as HTMLElement;
     this.swimLabelsEl = this.el.querySelector('.timeline-swim-labels')!;
     this.trackWrapper = this.el.querySelector('.timeline-track')!;
 
     const speedBtn = this.el.querySelector('#timeline-speed')! as HTMLElement;
+
+    // Instantiate the filter helper
+    this.filter = new TimelineFilter(
+      agentFilterContainer,
+      () => this.store.getTimeline(),
+      () => this.render(),
+    );
 
     // Resize canvas
     this.resizeCanvas();
@@ -163,28 +151,21 @@ export class Timeline {
     // Event type filter pills
     this.filterContainer.querySelectorAll('.tl-filter-pill').forEach((pill) => {
       pill.addEventListener('click', () => {
-        const cat = (pill as HTMLElement).dataset.category as EventCategory;
-        if (this.activeFilters.has(cat)) {
-          this.activeFilters.delete(cat);
-          pill.classList.remove('active');
-        } else {
-          this.activeFilters.add(cat);
-          pill.classList.add('active');
-        }
-        this.render();
+        const cat = (pill as HTMLElement).dataset.category as Parameters<TimelineFilter['toggleCategory']>[0];
+        this.filter.toggleCategory(cat, pill);
       });
     });
 
     // When new timeline snapshot arrives, re-render
     this.onTimelineBound = () => {
-      this.updateAgentFilters();
+      this.filter.updateAgentFilters();
       this.render();
     };
     this.store.on('timeline:snapshot', this.onTimelineBound);
 
     // Update agent filters when agents spawn/shutdown
-    this.onSpawnBound = () => this.updateAgentFilters();
-    this.onShutdownBound = () => this.updateAgentFilters();
+    this.onSpawnBound = () => this.filter.updateAgentFilters();
+    this.onShutdownBound = () => this.filter.updateAgentFilters();
     this.store.on('agent:spawn', this.onSpawnBound);
     this.store.on('agent:shutdown', this.onShutdownBound);
 
@@ -196,6 +177,7 @@ export class Timeline {
 
   setCustomizationLookup(fn: (agent: AgentState) => { displayName: string; colorIndex: number }): void {
     this._customizationLookup = fn;
+    this.filter.setCustomizationLookup(fn);
   }
 
   setReplayCallback(cb: (agents: Map<string, AgentState>) => void): void {
@@ -225,88 +207,11 @@ export class Timeline {
       this.expandBtn.innerHTML = '&#9650;'; // up arrow = expand
       this.expandBtn.title = 'Expand swim lanes';
     }
-    this.updateAgentFilters();
+    this.filter.updateAgentFilters();
     // Need to delay resize slightly for CSS transition
     requestAnimationFrame(() => {
       this.resizeCanvas();
     });
-  }
-
-  /** Build the agent filter pills based on known agents in timeline */
-  private updateAgentFilters(): void {
-    const agents = this.getUniqueAgents();
-    this.agentFilterContainer.innerHTML = '';
-
-    if (agents.length === 0) return;
-
-    for (const agent of agents) {
-      const palette = AGENT_PALETTES[agent.colorIndex % AGENT_PALETTES.length];
-      const color = '#' + palette.body.toString(16).padStart(6, '0');
-      const pill = document.createElement('button');
-      pill.className = 'tl-agent-pill';
-      // Show as active if visibleAgents is empty (show all) or this agent is in the set
-      if (this.visibleAgents.size === 0 || this.visibleAgents.has(agent.id)) {
-        pill.classList.add('active');
-      }
-      pill.innerHTML = `<span class="tl-agent-dot" style="background:${color}"></span>${agent.name}`;
-      pill.title = `Toggle ${agent.name}`;
-      pill.addEventListener('click', () => {
-        this.toggleAgentFilter(agent.id);
-      });
-      this.agentFilterContainer.appendChild(pill);
-    }
-  }
-
-  private toggleAgentFilter(agentId: string): void {
-    const agents = this.getUniqueAgents();
-
-    if (this.visibleAgents.size === 0) {
-      // Currently showing all. Clicking one means "show only this one"
-      // But if there's only 1 agent, toggling does nothing useful
-      if (agents.length <= 1) return;
-      // Set to show only the clicked agent
-      this.visibleAgents.clear();
-      this.visibleAgents.add(agentId);
-    } else if (this.visibleAgents.has(agentId)) {
-      this.visibleAgents.delete(agentId);
-      // If none remain, go back to "show all"
-      if (this.visibleAgents.size === 0) {
-        // Already empty = show all
-      }
-    } else {
-      this.visibleAgents.add(agentId);
-      // If all are now selected, clear to "show all" mode
-      if (this.visibleAgents.size >= agents.length) {
-        this.visibleAgents.clear();
-      }
-    }
-
-    this.updateAgentFilters();
-    this.render();
-  }
-
-  /** Get unique agents from timeline events, preserving order */
-  private getUniqueAgents(): { id: string; name: string; colorIndex: number }[] {
-    const events = this.store.getTimeline();
-    const seen = new Map<string, { id: string; name: string; colorIndex: number }>();
-    for (const e of events) {
-      if (!seen.has(e.agent.id)) {
-        const custom = this._customizationLookup?.(e.agent);
-        seen.set(e.agent.id, {
-          id: e.agent.id,
-          name: custom?.displayName || e.agent.agentName || e.agent.projectName || e.agent.id.slice(0, 8),
-          colorIndex: custom?.colorIndex ?? e.agent.colorIndex,
-        });
-      }
-    }
-    return Array.from(seen.values());
-  }
-
-  /** Get the filtered list of agents to show in swim lanes */
-  private getSwimLaneAgents(): { id: string; name: string; colorIndex: number }[] {
-    const all = this.getUniqueAgents();
-    if (this.visibleAgents.size === 0) return all;
-    return all.filter((a) => this.visibleAgents.has(a.id));
   }
 
   private resizeCanvas(): void {
@@ -360,7 +265,7 @@ export class Timeline {
     // Draw event markers
     for (const event of events) {
       const x = ((event.timestamp - start) / range) * w;
-      const color = this.getEventColor(event);
+      const color = getEventColor(event);
       ctx.fillStyle = color;
 
       if (event.type === 'agent:spawn') {
@@ -377,16 +282,16 @@ export class Timeline {
     }
 
     // Draw time ticks
-    this.drawTimeTicks(w, h, ctx, start, end, range);
+    drawTimeTicks(w, h, ctx, start, end, range);
 
     // Draw playback position
-    this.drawPlayhead(w, h, ctx, start, range);
+    drawPlayhead(w, h, ctx, start, range, this.isLive, this.playbackPosition, this.timeLabel);
   }
 
   /** Expanded swim-lane render: one row per agent */
   private renderExpanded(w: number, h: number, ctx: CanvasRenderingContext2D): void {
     const LABEL_WIDTH = 60;
-    const agents = this.getSwimLaneAgents();
+    const agents = this.filter.getSwimLaneAgents();
     const events = this.store.getTimeline();
     const { start, end } = this.getTimeRange();
     const range = end - start || 1;
@@ -405,7 +310,7 @@ export class Timeline {
       ctx.font = '11px Inter, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('No agent activity yet', w / 2, h / 2 + 4);
-      this.drawPlayhead(w, h, ctx, start, range);
+      drawPlayhead(w, h, ctx, start, range, this.isLive, this.playbackPosition, this.timeLabel);
       return;
     }
 
@@ -458,7 +363,7 @@ export class Timeline {
     for (const event of events) {
       // Check event type filter
       const cat = getEventCategory(event);
-      if (!this.activeFilters.has(cat)) continue;
+      if (!this.filter.isEventVisible(event, cat)) continue;
 
       // Check agent filter
       const row = agentRowMap.get(event.agent.id);
@@ -466,7 +371,7 @@ export class Timeline {
 
       const x = drawX + ((event.timestamp - start) / range) * drawW;
       const y = row * rowH;
-      const color = this.getEventColor(event);
+      const color = getEventColor(event);
       ctx.fillStyle = color;
 
       const cy = y + rowH / 2;
@@ -503,7 +408,7 @@ export class Timeline {
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.font = '9px monospace';
     ctx.textAlign = 'center';
-    const tickInterval = this.getTickInterval(range);
+    const tickInterval = getTickInterval(range);
     const firstTick = Math.ceil(start / tickInterval) * tickInterval;
     for (let t = firstTick; t <= end; t += tickInterval) {
       const x = drawX + ((t - start) / range) * drawW;
@@ -534,66 +439,6 @@ export class Timeline {
       ctx.stroke();
 
       this.timeLabel.textContent = 'LIVE';
-    }
-  }
-
-  /** Draw time ticks (shared by compact mode) */
-  private drawTimeTicks(w: number, h: number, ctx: CanvasRenderingContext2D, start: number, end: number, range: number): void {
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.font = '9px monospace';
-    ctx.textAlign = 'center';
-    const tickInterval = this.getTickInterval(range);
-    const firstTick = Math.ceil(start / tickInterval) * tickInterval;
-    for (let t = firstTick; t <= end; t += tickInterval) {
-      const x = ((t - start) / range) * w;
-      ctx.fillRect(x, 0, 1, 3);
-      const d = new Date(t);
-      ctx.fillText(d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), x, h - 1);
-    }
-  }
-
-  /** Draw the playback position indicator (shared by compact mode) */
-  private drawPlayhead(w: number, h: number, ctx: CanvasRenderingContext2D, start: number, range: number): void {
-    if (!this.isLive) {
-      const px = this.playbackPosition * w;
-      ctx.strokeStyle = '#e94560';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(px, 0);
-      ctx.lineTo(px, h);
-      ctx.stroke();
-
-      // Timestamp label
-      const posTime = start + this.playbackPosition * range;
-      this.timeLabel.textContent = new Date(posTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    } else {
-      // Live indicator line at the end
-      ctx.strokeStyle = '#4ade80';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(w - 1, 0);
-      ctx.lineTo(w - 1, h);
-      ctx.stroke();
-
-      this.timeLabel.textContent = 'LIVE';
-    }
-  }
-
-  private getTickInterval(rangeMs: number): number {
-    if (rangeMs < 5 * 60 * 1000) return 60 * 1000; // 1 min ticks for <5min range
-    if (rangeMs < 15 * 60 * 1000) return 2 * 60 * 1000;
-    return 5 * 60 * 1000; // 5 min ticks
-  }
-
-  private getEventColor(event: TimelineEvent): string {
-    switch (event.type) {
-      case 'agent:spawn': return '#a855f7';
-      case 'agent:shutdown': return '#f87171';
-      case 'agent:idle': return '#6b7280';
-      case 'agent:update': {
-        const palette = AGENT_PALETTES[event.agent.colorIndex % AGENT_PALETTES.length];
-        return '#' + palette.body.toString(16).padStart(6, '0');
-      }
     }
   }
 

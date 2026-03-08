@@ -1,0 +1,34 @@
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
+@media (max-width: 1023px) {
+  :root { --sidebar-nav-width: 52px; }
+  #sidebar { width: 52px; }
+  #sidebar .sb-label,
+  #sidebar .sb-shortcut,
+  #sidebar .sb-section-title,
+  #sidebar .sb-volume,
+  #sidebar .sb-theme-select { display: none; }
+  #sidebar .sb-item { justify-content: center; padding: 0; }
+  #sidebar .sb-theme-row { justify-content: center; }
+  #sidebar .sb-section-title { font-size: 0; padding: 0; height: 12px; border-bottom: 1px solid var(--border-subtle); margin: 0 6px 6px; }
+  #right-panel {
+    position: fixed;
+    top: var(--top-bar-height);
+    bottom: 0;
+    right: 0;
+    z-index: 30;
+    box-shadow: var(--shadow-lg);
+  }
+  .tb-stats { display: none; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

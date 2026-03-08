@@ -1,0 +1,78 @@
+:root {
+  /* Base colors */
+  --bg-primary: #1a1e38;
+  --bg-panel: rgba(18, 20, 40, 0.94);
+  --bg-panel-solid: rgba(14, 16, 32, 0.97);
+  --accent: #e94560;
+  --accent-dim: rgba(233, 69, 96, 0.15);
+  --success: #4ade80;
+  --success-dim: rgba(74, 222, 128, 0.15);
+  --error: #f87171;
+  --error-dim: rgba(239, 68, 68, 0.15);
+
+  /* Surface layers */
+  --surface-1: rgba(255,255,255,0.03);
+  --surface-2: rgba(255,255,255,0.04);
+  --surface-3: rgba(255,255,255,0.05);
+  --surface-4: rgba(255,255,255,0.06);
+  --surface-hover: rgba(255,255,255,0.08);
+  --surface-active: rgba(255,255,255,0.1);
+  --surface-bright: rgba(255,255,255,0.12);
+
+  /* Borders */
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-light: rgba(255,255,255,0.08);
+  --border-medium: rgba(255,255,255,0.1);
+  --border-strong: rgba(255,255,255,0.12);
+
+  /* Text colors */
+  --text-primary: #fff;
+  --text-secondary: #ccc;
+  --text-dim: #888;
+  --text-muted: #666;
+  --text-faint: #555;
+  --text-ghost: #444;
+
+  /* Font stack */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Spacing */
+  --sidebar-width: 360px;
+
+  /* Border radius tokens */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /* Design system tokens */
+  --text-xs: 10px; --text-sm: 11px; --text-base: 13px;
+  --text-md: 14px; --text-lg: 15px; --text-xl: 18px; --text-2xl: 22px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px;
+  --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  --card-bg: var(--surface-1); --card-border: var(--border-subtle);
+  --card-radius: 8px; --card-padding: 12px;
+  --btn-height-sm: 28px; --btn-height-md: 32px; --btn-height-lg: 36px;
+
+  /* Layout */
+  --top-bar-height: 48px;
+  --right-panel-width: 400px;
+  --sidebar-nav-width: 200px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+button, [role="button"], input, select, a { touch-action: manipulation; }
+:focus-visible {
+  outline: 2px solid rgba(233, 69, 96, 0.6);
+  outline-offset: 2px;
+}
+button:focus:not(:focus-visible) { outline: none; }
+button:active:not(:disabled) { transform: scale(0.97); }
+html { color-scheme: dark; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-primary); font-family: var(--font-ui); color: var(--text-secondary); }
+canvas { display: block; }

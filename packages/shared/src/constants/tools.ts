@@ -1,5 +1,25 @@
 import type { ZoneId } from '../types/zone.js';
 
+/** Tool name -> icon mapping for speech bubbles */
+export const TOOL_ICONS: Record<string, string> = {
+  Read: '\u{1F4D6}',       // open book
+  Write: '\u{270F}\uFE0F', // pencil
+  Edit: '\u{1F527}',       // wrench
+  Bash: '\u{1F4BB}',       // terminal
+  Glob: '\u{1F50D}',       // search
+  Grep: '\u{1F50E}',       // search right
+  WebSearch: '\u{1F310}',  // globe
+  WebFetch: '\u{1F310}',   // globe
+  Agent: '\u{1F916}',      // robot
+  TeamCreate: '\u{1F465}', // people
+  SendMessage: '\u{1F4AC}',// speech
+  TaskCreate: '\u{1F4CB}', // clipboard
+  TaskUpdate: '\u{2705}',  // check
+  AskUserQuestion: '\u{2753}', // question
+  EnterPlanMode: '\u{1F4DD}',  // memo
+  ExitPlanMode: '\u{1F4DD}',   // memo
+};
+
 /** Maps Claude Code tool names to activity zones */
 export const TOOL_ZONE_MAP: Record<string, ZoneId> = {
   // Files zone

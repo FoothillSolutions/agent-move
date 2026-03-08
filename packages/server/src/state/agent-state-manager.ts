@@ -8,6 +8,19 @@ import { getGitBranch } from '../watcher/git-info.js';
 import { AnomalyDetector } from './anomaly-detector.js';
 import { ToolChainTracker } from './tool-chain-tracker.js';
 import { TaskGraphManager } from './task-graph-manager.js';
+import {
+  resolveAgentId,
+  transferAndRemove,
+  mergeIntoNamed,
+  promoteAgent,
+} from './identity-manager.js';
+import {
+  determineRole,
+  determineRoleForNamed,
+  findParentId,
+  getParentTeamName,
+} from './role-resolver.js';
+import { processToolActivity } from './activity-processor.js';
 
 const MAX_HISTORY_PER_AGENT = 500;
 const MAX_HISTORY_AGE_MS = 30 * 60 * 1000; // 30 minutes
@@ -132,34 +145,6 @@ export class AgentStateManager extends EventEmitter {
     }
   }
 
-  /** Tools that can block for a long time waiting for results (e.g. shell commands, browser actions). */
-  private static readonly LONG_RUNNING_TOOLS = new Set([
-    'Bash',
-    'Agent',
-    'WebFetch',
-    'WebSearch',
-    // Tools that block waiting for user input
-    'AskUserQuestion',
-    // Browser/playwright tools that wait for navigation or network
-    'mcp__playwright__browser_navigate',
-    'mcp__playwright__browser_wait_for',
-    'mcp__playwright__browser_run_code',
-    'mcp__chrome-devtools__navigate_page',
-    'mcp__chrome-devtools__wait_for',
-    'mcp__chrome-devtools__evaluate_script',
-    'mcp__chrome-devtools__performance_start_trace',
-    'mcp__chrome-devtools__performance_stop_trace',
-  ]);
-
-  /** Tools that block specifically waiting for user input/confirmation */
-  private static readonly USER_BLOCKING_TOOLS = new Set([
-    'AskUserQuestion',
-  ]);
-
-  private isLongRunningTool(toolName: string): boolean {
-    return AgentStateManager.LONG_RUNNING_TOOLS.has(toolName);
-  }
-
   private summarizeToolInput(input: unknown): string {
     if (!input) return '';
     try {
@@ -179,7 +164,7 @@ export class AgentStateManager extends EventEmitter {
    * Resolve a sessionId to its canonical agent ID.
    */
   private resolveAgentId(sessionId: string): string {
-    return this.sessionToAgent.get(sessionId) ?? sessionId;
+    return resolveAgentId(this.sessionToAgent, sessionId);
   }
 
   /**
@@ -196,81 +181,37 @@ export class AgentStateManager extends EventEmitter {
     return sessionId; // orphan
   }
 
-  /** Transfer token counts from source agent to target and remove the source. */
-  private transferAndRemove(sourceId: string, target: AgentState, redirectSessionId: string): void {
-    const source = this.agents.get(sourceId);
-    if (source) {
-      target.totalInputTokens += source.totalInputTokens;
-      target.totalOutputTokens += source.totalOutputTokens;
-      target.cacheReadTokens += source.cacheReadTokens;
-      target.cacheCreationTokens += source.cacheCreationTokens;
-    }
-    this.agents.delete(sourceId);
-    this.hiddenAgents.delete(sourceId);
-    this.clearTimers(sourceId);
-    this.toolChainTracker.migrateAgent(sourceId, target.id);
-    this.sessionToAgent.set(redirectSessionId, target.id);
-    target.isIdle = false;
-    target.isDone = false;
-    target.lastActivityAt = Date.now();
+  /** Build the deps object required by identity-manager functions. */
+  private get identityDeps() {
+    return {
+      agents: this.agents,
+      hiddenAgents: this.hiddenAgents,
+      sessionToAgent: this.sessionToAgent,
+      namedAgentMap: this.namedAgentMap,
+      identityTimers: this.identityTimers,
+      toolChainTracker: this.toolChainTracker,
+      clearTimers: (id: string) => this.clearTimers(id),
+      recordTimeline: (e: AgentEvent) => this.recordTimeline(e),
+      emit: (event: string, ...args: unknown[]) => this.emit(event, ...args),
+    };
   }
 
-  /**
-   * Merge a hidden agent into an existing named agent.
-   * Returns the existing agent if merged, or null.
-   */
-  private mergeIntoNamed(hiddenId: string, agentName: string): AgentState | null {
-    const hidden = this.agents.get(hiddenId);
-    if (!hidden) return null;
-
-    const key = `${hidden.rootSessionId}:${agentName}`;
-    const existingId = this.namedAgentMap.get(key);
-
-    if (!existingId || existingId === hiddenId) return null;
-
-    const existing = this.agents.get(existingId);
-    if (!existing) return null;
-
-    this.transferAndRemove(hiddenId, existing, hiddenId);
-
-    console.log(`Merged session ${hiddenId.slice(0, 12)}… into agent "${agentName}" (${existingId.slice(0, 12)}…)`);
-    return existing;
-  }
-
-  /**
-   * Promote a hidden agent to visible (emit spawn event).
-   */
-  private promoteAgent(agentId: string): void {
-    this.hiddenAgents.delete(agentId);
-    const idTimer = this.identityTimers.get(agentId);
-    if (idTimer) clearTimeout(idTimer);
-    this.identityTimers.delete(agentId);
-
-    const agent = this.agents.get(agentId);
-    if (!agent) return;
-
-    console.log(`Promoting hidden agent ${agentId.slice(0, 12)}… (name: ${agent.agentName ?? 'unknown'})`);
-    const now = Date.now();
-    const spawnEvent = { type: 'agent:spawn', agent: { ...agent }, timestamp: now } satisfies AgentEvent;
-    this.recordTimeline(spawnEvent);
-    this.emit('agent:spawn', spawnEvent);
-
-    // Also emit current state as an update
-    const updateEvent = { type: 'agent:update', agent: { ...agent }, timestamp: now } satisfies AgentEvent;
-    this.recordTimeline(updateEvent);
-    this.emit('agent:update', updateEvent);
-  }
-
-  /**
-   * Determine the role for a named subagent based on its parent.
-   * Only direct children of a team-lead become team-members.
-   * All others stay as subagents (even if they have a name).
-   */
-  private determineRoleForNamed(parentId: string | null, pendingTeam: string | null): AgentState['role'] {
-    // Only explicit team assignment (Agent tool's team_name parameter) makes a team-member.
-    // Sub-agents spawned by the team-lead without team_name stay as subagents.
-    if (pendingTeam) return 'team-member';
-    return 'subagent';
+  /** Build the deps object required by activity-processor functions. */
+  private get activityDeps() {
+    return {
+      pendingTool: this.pendingTool,
+      anomalyDetector: this.anomalyDetector,
+      toolChainTracker: this.toolChainTracker,
+      taskGraphManager: this.taskGraphManager,
+      namedAgentMap: this.namedAgentMap,
+      addHistory: (id: string, entry: ActivityEntry) => this.addHistory(id, entry),
+      summarizeToolInput: (input: unknown) => this.summarizeToolInput(input),
+      queuePendingInfo: (parentId: string, info: { name: string | null; task: string | null; team: string | null }) =>
+        this.queuePendingInfo(parentId, info),
+      queueRecipient: (rootSessionId: string, sender: string, recipient: string) =>
+        this.queueRecipient(rootSessionId, sender, recipient),
+      emit: (event: string, ...args: unknown[]) => this.emit(event, ...args),
+    };
   }
 
   /**
@@ -320,20 +261,20 @@ export class AgentStateManager extends EventEmitter {
 
       if (discoveredName) {
         // Identity discovered! Try to merge into existing named agent
-        const merged = this.mergeIntoNamed(canonicalId, discoveredName);
+        const merged = mergeIntoNamed(this.identityDeps, canonicalId, discoveredName);
         if (merged) {
           this.applyActivity(merged, activity, now, sessionInfo);
           return;
         }
         // No existing agent with this name — register and promote
         agent.agentName = discoveredName;
-        const role = this.determineRoleForNamed(agent.parentId, null);
+        const role = determineRoleForNamed(agent.parentId, null);
         agent.role = role;
         agent.teamName = role === 'team-member'
-          ? (agent.teamName || this.getParentTeamName(agent.rootSessionId))
+          ? (agent.teamName || getParentTeamName(this.agents, agent.rootSessionId))
           : null;
         this.namedAgentMap.set(`${agent.rootSessionId}:${discoveredName}`, canonicalId);
-        this.promoteAgent(canonicalId);
+        promoteAgent(this.identityDeps, canonicalId);
         this.applyActivity(agent, activity, now, sessionInfo);
         return;
       }
@@ -350,7 +291,7 @@ export class AgentStateManager extends EventEmitter {
         // There's already a different agent with this name — merge into it
         const existing = this.agents.get(existingId);
         if (existing) {
-          this.transferAndRemove(canonicalId, existing, sessionId);
+          transferAndRemove(this.identityDeps, canonicalId, existing, sessionId);
 
           // Shutdown the duplicate sprite on clients
           this.emit('agent:shutdown', {
@@ -366,10 +307,10 @@ export class AgentStateManager extends EventEmitter {
       }
       // No conflict — just register the name
       agent.agentName = activity.agentName;
-      const role = this.determineRoleForNamed(agent.parentId, null);
+      const role = determineRoleForNamed(agent.parentId, null);
       agent.role = role;
       agent.teamName = role === 'team-member'
-        ? (agent.teamName || this.getParentTeamName(agent.rootSessionId))
+        ? (agent.teamName || getParentTeamName(this.agents, agent.rootSessionId))
         : agent.teamName;
       this.namedAgentMap.set(key, canonicalId);
       console.log(`Agent ${canonicalId.slice(0, 12)}… identified as "${activity.agentName}"`);
@@ -381,7 +322,7 @@ export class AgentStateManager extends EventEmitter {
       const parentId = sessionInfo.isSubagent
         ? (sessionInfo.parentSessionId
             ? this.resolveAgentId(sessionInfo.parentSessionId)
-            : this.findParentId(sessionInfo.projectDir))
+            : findParentId(this.agents, sessionInfo.projectDir))
         : null;
 
       // Compute rootSessionId (scopes all lookups to this terminal session)
@@ -417,10 +358,10 @@ export class AgentStateManager extends EventEmitter {
 
       // Determine role based on parent and team context
       const role = agentName
-        ? this.determineRoleForNamed(parentId, pendingTeam)
-        : this.determineRole(activity, sessionInfo);
+        ? determineRoleForNamed(parentId, pendingTeam)
+        : determineRole(activity, sessionInfo);
       const teamName = role === 'team-member'
-        ? (pendingTeam || this.getParentTeamName(rootSessionId))
+        ? (pendingTeam || getParentTeamName(this.agents, rootSessionId))
         : null;
 
       // Create the agent
@@ -476,7 +417,7 @@ export class AgentStateManager extends EventEmitter {
         const timer = setTimeout(() => {
           if (this.hiddenAgents.has(sessionId)) {
             console.log(`Identity timeout for ${sessionId.slice(0, 12)}… — promoting with fallback name`);
-            this.promoteAgent(sessionId);
+            promoteAgent(this.identityDeps, sessionId);
           }
         }, IDENTITY_TIMEOUT_MS);
         this.identityTimers.set(sessionId, timer);
@@ -520,7 +461,6 @@ export class AgentStateManager extends EventEmitter {
 
   /** Mutate agent state based on activity (shared between silent and loud paths) */
   private mutateAgentState(agent: AgentState, activity: ParsedActivity, now: number, _sessionInfo: SessionInfo) {
-    const agentId = agent.id;
     agent.lastActivityAt = now;
     agent.isIdle = false;
     agent.isDone = false;
@@ -530,238 +470,8 @@ export class AgentStateManager extends EventEmitter {
       agent.model = activity.model;
     }
 
-    switch (activity.type) {
-      case 'tool_use': {
-        // Only mark as pending for tools that can genuinely run for a long time.
-        // Instant tools (messaging, task management, reads, edits) complete quickly
-        // and should NOT prevent idle detection.
-        const toolName = activity.toolName ?? '';
-        if (this.isLongRunningTool(toolName)) {
-          this.pendingTool.add(agentId);
-        } else {
-          this.pendingTool.delete(agentId);
-        }
-        // Track user-blocking state
-        agent.isWaitingForUser = AgentStateManager.USER_BLOCKING_TOOLS.has(toolName);
-
-        const prevZone = agent.currentZone;
-        agent.currentTool = activity.toolName ?? null;
-        agent.currentActivity = this.summarizeToolInput(activity.toolInput) || null;
-        agent.currentZone = getZoneForTool(activity.toolName ?? '');
-        agent.toolUseCount++;
-
-        // Anomaly & analytics tracking
-        this.anomalyDetector.setAgentName(agentId, agent.agentName ?? agent.projectName ?? agentId.slice(0, 10));
-        this.anomalyDetector.checkToolUse(agentId, toolName);
-        this.toolChainTracker.recordToolUse(agentId, toolName);
-
-        // Task graph tracking
-        if (toolName === 'TaskCreate' || toolName === 'TaskUpdate') {
-          const graphChanged = this.taskGraphManager.processToolUse(
-            agentId,
-            agent.agentName ?? agentId.slice(0, 10),
-            toolName,
-            activity.toolInput,
-            agent.projectName,
-            agent.rootSessionId,
-          );
-          if (graphChanged) {
-            this.emit('taskgraph:changed', { data: this.taskGraphManager.getSnapshot(), timestamp: Date.now() });
-          }
-        }
-
-        // Update git branch (getGitBranch has its own 30s cache)
-        if (agent.projectPath) {
-          agent.gitBranch = getGitBranch(agent.projectPath);
-        }
-
-        // Extract file paths from file-related tools
-        if (activity.toolInput) {
-          const input = activity.toolInput as Record<string, unknown>;
-          const filePath = input.file_path as string | undefined;
-          if (filePath) {
-            agent.recentFiles = [filePath, ...agent.recentFiles.filter(f => f !== filePath)].slice(0, 10);
-          }
-        }
-
-        if (activity.toolName === 'EnterPlanMode') {
-          agent.isPlanning = true;
-        } else if (activity.toolName === 'ExitPlanMode') {
-          agent.isPlanning = false;
-        }
-
-        if (activity.toolName === 'TeamCreate' && activity.toolInput) {
-          agent.teamName = (activity.toolInput as Record<string, unknown>).team_name as string ?? null;
-          agent.role = 'team-lead';
-          // Register as "team-lead" so message-handling sessions merge into this agent
-          // instead of creating a duplicate "team-lead" member
-          if (!agent.agentName) {
-            agent.agentName = 'team-lead';
-          }
-          this.namedAgentMap.set(`${agent.rootSessionId}:team-lead`, agentId);
-        }
-        if (activity.toolName === 'SendMessage') {
-          agent.currentZone = 'messaging';
-          if (activity.toolInput) {
-            const input = activity.toolInput as Record<string, unknown>;
-            const recipient = input.recipient as string | undefined;
-            // Set messageTarget for client-side flow visualization
-            agent.messageTarget = recipient ?? null;
-            // Queue recipient name so the incoming session can be identified
-            // Scoped to rootSessionId so cross-session messages don't collide
-            const senderIdentity = agent.agentName || (agent.role === 'team-lead' ? 'team-lead' : null);
-            if (recipient && senderIdentity) {
-              this.queueRecipient(agent.rootSessionId, senderIdentity, recipient);
-            }
-          }
-        } else {
-          agent.messageTarget = null;
-        }
-
-        // Queue name + description + team for incoming subagent (as compound object)
-        if (activity.toolName === 'Agent' && activity.toolInput) {
-          const input = activity.toolInput as Record<string, unknown>;
-          const desc = (input.description ?? input.prompt ?? '') as string;
-          const name = (input.name as string | undefined) ?? null;
-          const teamName = (input.team_name as string | undefined) ?? null;
-          this.queuePendingInfo(agentId, {
-            name,
-            task: desc ? (desc.length > 80 ? desc.slice(0, 77) + '...' : desc) : null,
-            team: teamName,
-          });
-        }
-
-        // Capture diff from Edit tool
-        let diffData: { filePath: string; oldText: string; newText: string } | undefined;
-        if (activity.toolName === 'Edit' && activity.toolInput) {
-          const input = activity.toolInput as Record<string, unknown>;
-          const fp = (input.file_path as string) ?? '';
-          const oldStr = (input.old_string as string) ?? '';
-          const newStr = (input.new_string as string) ?? '';
-          if (fp && (oldStr || newStr)) {
-            diffData = {
-              filePath: fp,
-              oldText: oldStr.length > 500 ? oldStr.slice(0, 500) + '...' : oldStr,
-              newText: newStr.length > 500 ? newStr.slice(0, 500) + '...' : newStr,
-            };
-          }
-        }
-
-        // Accumulate recent diffs (newest first, max 10)
-        if (diffData) {
-          agent.recentDiffs.unshift({ ...diffData, timestamp: now });
-          if (agent.recentDiffs.length > 10) agent.recentDiffs.pop();
-        }
-
-        this.addHistory(agentId, {
-          timestamp: now,
-          kind: 'tool',
-          tool: activity.toolName ?? undefined,
-          toolArgs: this.summarizeToolInput(activity.toolInput),
-          zone: agent.currentZone,
-          diff: diffData,
-        });
-
-        if (prevZone !== agent.currentZone) {
-          this.addHistory(agentId, {
-            timestamp: now,
-            kind: 'zone-change',
-            zone: agent.currentZone,
-            prevZone,
-          });
-        }
-
-        // Accumulate token usage included in this message (parser attaches usage to tool_use)
-        if (activity.inputTokens !== undefined || activity.outputTokens !== undefined) {
-          agent.totalInputTokens += activity.inputTokens ?? 0;
-          agent.totalOutputTokens += activity.outputTokens ?? 0;
-          agent.cacheReadTokens += activity.cacheReadTokens ?? 0;
-          agent.cacheCreationTokens += activity.cacheCreationTokens ?? 0;
-        }
-        break;
-      }
-
-      case 'text':
-        // Text from assistant = Claude has responded, tool is no longer pending
-        this.pendingTool.delete(agentId);
-        agent.isWaitingForUser = false;
-        if (activity.text) {
-          agent.speechText = activity.text;
-          agent.currentActivity = activity.text;
-          if (!agent.taskDescription) {
-            agent.taskDescription = activity.text;
-          }
-          this.addHistory(agentId, {
-            timestamp: now,
-            kind: 'text',
-            text: activity.text,
-          });
-        }
-        // Accumulate token usage included in this message
-        if (activity.inputTokens !== undefined || activity.outputTokens !== undefined) {
-          agent.totalInputTokens += activity.inputTokens ?? 0;
-          agent.totalOutputTokens += activity.outputTokens ?? 0;
-          agent.cacheReadTokens += activity.cacheReadTokens ?? 0;
-          agent.cacheCreationTokens += activity.cacheCreationTokens ?? 0;
-        }
-        break;
-
-      case 'token_usage':
-        // Token usage = message finished, tool is no longer pending
-        this.pendingTool.delete(agentId);
-        agent.isWaitingForUser = false;
-        agent.totalInputTokens += activity.inputTokens ?? 0;
-        agent.totalOutputTokens += activity.outputTokens ?? 0;
-        agent.cacheReadTokens += activity.cacheReadTokens ?? 0;
-        agent.cacheCreationTokens += activity.cacheCreationTokens ?? 0;
-        this.anomalyDetector.checkTokenUsage(agentId, activity.inputTokens ?? 0, activity.outputTokens ?? 0);
-        this.addHistory(agentId, {
-          timestamp: now,
-          kind: 'tokens',
-          inputTokens: activity.inputTokens ?? 0,
-          outputTokens: activity.outputTokens ?? 0,
-        });
-        break;
-    }
+    processToolActivity(this.activityDeps, agent, activity, now);
   }
-
-  /** Inherit teamName from parent agent in the same session hierarchy */
-  private getParentTeamName(rootSessionId: string): string | null {
-    for (const agent of this.agents.values()) {
-      if (agent.rootSessionId === rootSessionId && agent.teamName) {
-        return agent.teamName;
-      }
-    }
-    return null;
-  }
-
-  private determineRole(_activity: ParsedActivity, sessionInfo: SessionInfo): AgentState['role'] {
-    if (sessionInfo.isSubagent) return 'subagent';
-    return 'main';
-  }
-
-  private findParentId(projectDir: string): string | null {
-    // Priority 1: team-lead (the designated orchestrator for team scenarios)
-    for (const [id, agent] of this.agents) {
-      if (agent.projectPath === projectDir && agent.role === 'team-lead') {
-        return id;
-      }
-    }
-    // Priority 2: main session
-    for (const [id, agent] of this.agents) {
-      if (agent.projectPath === projectDir && agent.role === 'main') {
-        return id;
-      }
-    }
-    // Priority 3: any non-leaf agent (fallback)
-    for (const [id, agent] of this.agents) {
-      if (agent.projectPath === projectDir && agent.role !== 'subagent' && agent.role !== 'team-member') {
-        return id;
-      }
-    }
-    return null;
-  }
-
 
   private queuePendingInfo(parentId: string, info: { name: string | null; task: string | null; team: string | null }): void {
     let queue = this.pendingSubagentInfo.get(parentId);
@@ -774,7 +484,6 @@ export class AgentStateManager extends EventEmitter {
     if (!queue || queue.length === 0) return null;
     return queue.shift()!;
   }
-
 
   private queueRecipient(rootSessionId: string, sender: string, recipient: string): void {
     let queue = this.pendingRecipients.get(rootSessionId);

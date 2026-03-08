@@ -1,0 +1,39 @@
+/* ═══════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════ */
+@keyframes hooks-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes emptyPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes toastIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes toastOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(-20px); } }
+
+@keyframes alertFlash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+@keyframes hudPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(74, 222, 128, 0); }
+}
+
+@keyframes hooksPendingPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0); }
+}
+
+/* ═══════════════════════════════════════════
+   HOOKS STATUS DOT ENHANCEMENTS
+   ═══════════════════════════════════════════ */
+#hooks-dot.hooks-active {
+  background: #a78bfa;
+  box-shadow: 0 0 6px rgba(167, 139, 250, 0.5);
+}
+#hooks-dot.hooks-pending {
+  background: #f59e0b;
+  animation: hooksPendingPulse 1.5s ease-in-out infinite;
+}
