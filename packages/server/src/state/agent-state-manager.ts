@@ -208,6 +208,7 @@ export class AgentStateManager extends EventEmitter {
     this.agents.delete(sourceId);
     this.hiddenAgents.delete(sourceId);
     this.clearTimers(sourceId);
+    this.toolChainTracker.migrateAgent(sourceId, target.id);
     this.sessionToAgent.set(redirectSessionId, target.id);
     target.isIdle = false;
     target.isDone = false;
@@ -669,6 +670,14 @@ export class AgentStateManager extends EventEmitter {
             prevZone,
           });
         }
+
+        // Accumulate token usage included in this message (parser attaches usage to tool_use)
+        if (activity.inputTokens !== undefined || activity.outputTokens !== undefined) {
+          agent.totalInputTokens += activity.inputTokens ?? 0;
+          agent.totalOutputTokens += activity.outputTokens ?? 0;
+          agent.cacheReadTokens += activity.cacheReadTokens ?? 0;
+          agent.cacheCreationTokens += activity.cacheCreationTokens ?? 0;
+        }
         break;
       }
 
@@ -687,6 +696,13 @@ export class AgentStateManager extends EventEmitter {
             kind: 'text',
             text: activity.text,
           });
+        }
+        // Accumulate token usage included in this message
+        if (activity.inputTokens !== undefined || activity.outputTokens !== undefined) {
+          agent.totalInputTokens += activity.inputTokens ?? 0;
+          agent.totalOutputTokens += activity.outputTokens ?? 0;
+          agent.cacheReadTokens += activity.cacheReadTokens ?? 0;
+          agent.cacheCreationTokens += activity.cacheCreationTokens ?? 0;
         }
         break;
 

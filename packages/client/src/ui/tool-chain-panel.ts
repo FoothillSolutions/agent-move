@@ -83,7 +83,7 @@ export class ToolChainPanel {
       html += `<div class="tc-tool-bar" style="width:${pct}%"></div>`;
       // Failure overlay bar
       if (failures > 0) {
-        const failPct = (failures / count) * pct;
+        const failPct = outcomes > 0 ? (failures / outcomes) * pct : 0;
         html += `<div class="tc-tool-bar tc-fail-bar" style="width:${failPct}%"></div>`;
       }
       html += `</div>`;

@@ -65,7 +65,7 @@ export class LeaderboardPanel {
     const rows: AgentRow[] = agents.map(a => {
       const cost = this.computeCost(a);
       const duration = Date.now() - a.spawnedAt;
-      const totalTokens = a.totalInputTokens + a.totalOutputTokens;
+      const totalTokens = a.totalInputTokens + a.totalOutputTokens + a.cacheReadTokens + a.cacheCreationTokens;
       const velocity = duration > 60000 ? totalTokens / (duration / 60000) : totalTokens;
       return { ...a, cost, duration, velocity };
     });
@@ -73,7 +73,7 @@ export class LeaderboardPanel {
     rows.sort((a, b) => {
       let va: number, vb: number;
       switch (this.sortColumn) {
-        case 'tokens': va = a.totalInputTokens + a.totalOutputTokens; vb = b.totalInputTokens + b.totalOutputTokens; break;
+        case 'tokens': va = a.totalInputTokens + a.totalOutputTokens + a.cacheReadTokens + a.cacheCreationTokens; vb = b.totalInputTokens + b.totalOutputTokens + b.cacheReadTokens + b.cacheCreationTokens; break;
         case 'cost': va = a.cost; vb = b.cost; break;
         case 'duration': va = a.duration; vb = b.duration; break;
         case 'tools': va = a.toolUseCount; vb = b.toolUseCount; break;
@@ -82,7 +82,7 @@ export class LeaderboardPanel {
       return this.sortDir === 'desc' ? vb - va : va - vb;
     });
 
-    const maxTokens = Math.max(...rows.map(r => r.totalInputTokens + r.totalOutputTokens), 1);
+    const maxTokens = Math.max(...rows.map(r => r.totalInputTokens + r.totalOutputTokens + r.cacheReadTokens + r.cacheCreationTokens), 1);
 
     this.contentEl.innerHTML = `
       <table class="lb-table">
@@ -103,7 +103,7 @@ export class LeaderboardPanel {
             const palette = AGENT_PALETTES[effectiveColorIndex % AGENT_PALETTES.length];
             const color = '#' + palette.body.toString(16).padStart(6, '0');
             const name = custom?.displayName || r.agentName || r.projectName || r.sessionId.slice(0, 10);
-            const totalTokens = r.totalInputTokens + r.totalOutputTokens;
+            const totalTokens = r.totalInputTokens + r.totalOutputTokens + r.cacheReadTokens + r.cacheCreationTokens;
             const barPct = (totalTokens / maxTokens) * 100;
             const badge = i < 3 ? RANK_BADGES[i] : `${i + 1}`;
             return `<tr>

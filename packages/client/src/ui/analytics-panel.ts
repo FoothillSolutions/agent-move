@@ -1,5 +1,5 @@
-import type { AgentState, ZoneId } from '@agent-move/shared';
-import { AGENT_PALETTES, ZONES, ZONE_MAP, getModelPricing, computeAgentCost } from '@agent-move/shared';
+import type { AgentState, ZoneId, ToolChainData } from '@agent-move/shared';
+import { AGENT_PALETTES, ZONE_MAP, getModelPricing, computeAgentCost } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 import { escapeHtml, hexToCss, formatTokens, formatDuration } from '../utils/formatting.js';
 
@@ -43,10 +43,11 @@ export class AnalyticsPanel {
   private thresholdAlerted = false;
   private thresholdFocused = false;
   private alertEl: HTMLElement | null = null;
-  private toolCounts = new Map<string, number>();
+  private toolChainData: ToolChainData | null = null;
   private zoneTime = new Map<ZoneId, number>();
   private _customizationLookup: ((agent: AgentState) => { displayName: string; colorIndex: number }) | null = null;
   private onAgentUpdateBound: (agent: AgentState) => void;
+  private onToolChainBound: (data: ToolChainData) => void;
 
   setCustomizationLookup(lookup: (agent: AgentState) => { displayName: string; colorIndex: number }): void {
     this._customizationLookup = lookup;
@@ -79,12 +80,12 @@ export class AnalyticsPanel {
     // Listen for updates
     this.onAgentUpdateBound = (agent: AgentState) => {
       this.checkThreshold();
-      if (agent.currentTool) {
-        const count = this.toolCounts.get(agent.currentTool) ?? 0;
-        this.toolCounts.set(agent.currentTool, count + 1);
-      }
+    };
+    this.onToolChainBound = (data: ToolChainData) => {
+      this.toolChainData = data;
     };
     this.store.on('agent:update', this.onAgentUpdateBound);
+    this.store.on('toolchain:snapshot', this.onToolChainBound);
   }
 
   show(): void {
@@ -108,7 +109,7 @@ export class AnalyticsPanel {
     const agents = Array.from(this.store.getAgents().values());
     let total = 0;
     for (const a of agents) {
-      total += a.totalInputTokens + a.totalOutputTokens;
+      total += a.totalInputTokens + a.totalOutputTokens + a.cacheReadTokens + a.cacheCreationTokens;
       // Accumulate zone time (in seconds)
       const zoneKey: ZoneId = a.isIdle ? 'idle' as ZoneId : a.currentZone;
       const prev = this.zoneTime.get(zoneKey) ?? 0;
@@ -224,8 +225,10 @@ export class AnalyticsPanel {
 
     const allInput = totalInput + totalCacheRead + totalCacheCreation;
     const cacheHitRate = allInput > 0 ? (totalCacheRead / allInput) * 100 : 0;
-    const avgPricing = getModelPricing(snapshots[0]?.model ?? null);
-    const cacheSavings = (totalCacheRead / 1_000_000) * avgPricing.input * 0.9;
+    const cacheSavings = snapshots.reduce((sum, a) => {
+      const pricing = getModelPricing(a.model);
+      return sum + (a.cacheReadTokens / 1_000_000) * pricing.input * 0.9;
+    }, 0);
 
     const sortedAgents = [...snapshots].sort(
       (a, b) => this.calculateCost(b) - this.calculateCost(a)
@@ -400,14 +403,13 @@ export class AnalyticsPanel {
   }
 
   private renderToolUsageBars(): string {
-    if (this.toolCounts.size === 0) {
+    const counts = this.toolChainData?.toolCounts ?? {};
+    const entries = Object.entries(counts);
+    if (entries.length === 0) {
       return '<div class="analytics-empty">No tool usage data yet</div>';
     }
 
-    const sorted = Array.from(this.toolCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
-
+    const sorted = entries.sort((a, b) => b[1] - a[1]).slice(0, 10);
     const maxCount = sorted[0][1];
 
     return sorted.map(([tool, count]) => {
@@ -437,9 +439,9 @@ export class AnalyticsPanel {
   }
 
   private renderCostEfficiency(snapshots: AgentSnapshot[], totalCost: number): string {
-    const totalToolUses = Array.from(this.toolCounts.values()).reduce((a, b) => a + b, 0);
+    const totalToolUses = Object.values(this.toolChainData?.toolCounts ?? {}).reduce((a, b) => a + b, 0);
     const costPerTool = totalToolUses > 0 ? totalCost / totalToolUses : 0;
-    const totalTokens = snapshots.reduce((s, a) => s + a.inputTokens + a.outputTokens, 0);
+    const totalTokens = snapshots.reduce((s, a) => s + a.inputTokens + a.outputTokens + a.cacheReadTokens + a.cacheCreationTokens, 0);
     const tokensPerTool = totalToolUses > 0 ? totalTokens / totalToolUses : 0;
 
     // Cost per agent per minute
@@ -500,6 +502,7 @@ export class AnalyticsPanel {
     clearInterval(this.refreshTimer);
     clearInterval(this.sampleTimer);
     this.store.off('agent:update', this.onAgentUpdateBound);
+    this.store.off('toolchain:snapshot', this.onToolChainBound);
     this.contentEl.remove();
     this.alertEl?.remove();
   }

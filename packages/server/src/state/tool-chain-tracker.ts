@@ -57,6 +57,20 @@ export class ToolChainTracker {
     this.pendingStart.delete(agentId);
   }
 
+  /** Migrate per-agent state from an old ID to a new canonical ID (used on agent merge). */
+  migrateAgent(fromId: string, toId: string): void {
+    const last = this.lastTool.get(fromId);
+    if (last !== undefined) {
+      if (!this.lastTool.has(toId)) this.lastTool.set(toId, last);
+      this.lastTool.delete(fromId);
+    }
+    const pending = this.pendingStart.get(fromId);
+    if (pending !== undefined) {
+      if (!this.pendingStart.has(toId)) this.pendingStart.set(toId, pending);
+      this.pendingStart.delete(fromId);
+    }
+  }
+
   reset(): void {
     this.lastTool.clear();
     this.transitions.clear();

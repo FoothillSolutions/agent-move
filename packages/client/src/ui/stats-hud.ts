@@ -1,5 +1,5 @@
 import type { AgentState } from '@agent-move/shared';
-import { getModelPricing } from '@agent-move/shared';
+import { computeAgentCost } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 import { formatTokens } from '../utils/formatting.js';
 
@@ -51,7 +51,7 @@ export class StatsHud {
     const agents = Array.from(this.store.getAgents().values());
     let total = 0;
     for (const a of agents) {
-      total += a.totalInputTokens + a.totalOutputTokens;
+      total += a.totalInputTokens + a.totalOutputTokens + a.cacheReadTokens + a.cacheCreationTokens;
     }
     this.samples.push({ timestamp: Date.now(), total });
     if (this.samples.length > 90) this.samples.shift(); // 3 min
@@ -79,9 +79,7 @@ export class StatsHud {
     // Cost
     let totalCost = 0;
     for (const a of agents) {
-      const pricing = getModelPricing(a.model);
-      totalCost += (a.totalInputTokens / 1_000_000) * pricing.input +
-                   (a.totalOutputTokens / 1_000_000) * pricing.output;
+      totalCost += computeAgentCost(a);
     }
 
     // Velocity

@@ -86,6 +86,10 @@ export class JsonlParser {
           toolInput: toolBlock.input,
           model: msg.message.model,
           sessionId,
+          inputTokens: msg.message.usage?.input_tokens,
+          outputTokens: msg.message.usage?.output_tokens,
+          cacheReadTokens: msg.message.usage?.cache_read_input_tokens,
+          cacheCreationTokens: msg.message.usage?.cache_creation_input_tokens,
         };
       }
     }
@@ -101,6 +105,10 @@ export class JsonlParser {
             text,
             model: msg.message.model,
             sessionId,
+            inputTokens: msg.message.usage?.input_tokens,
+            outputTokens: msg.message.usage?.output_tokens,
+            cacheReadTokens: msg.message.usage?.cache_read_input_tokens,
+            cacheCreationTokens: msg.message.usage?.cache_creation_input_tokens,
           };
         }
       }
