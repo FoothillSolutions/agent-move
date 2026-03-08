@@ -515,7 +515,13 @@ export class Overlay {
       </div>
       ${agent.taskDescription ? `<div class="task-desc" title="${escapeAttr(agent.taskDescription)}">${escapeHtml(truncate(agent.taskDescription, 48))}</div>` : ''}
       <div class="zone">${zone?.icon ?? ''} ${zoneName} · ${toolText}</div>
-      <div class="card-tokens">${tokens}</div>
+      <div class="card-tokens">${agent.contextTokens > 0 ? (() => {
+        const pct = Math.round(agent.contextTokens / 200_000 * 100);
+        const color = pct >= 90 ? '#ef4444' : pct >= 75 ? '#f97316' : pct >= 50 ? '#eab308' : '#22c55e';
+        const newTok = agent.contextTokens - agent.contextCacheTokens;
+        const fmtK = (n: number) => n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`;
+        return `<span class="detail-ctx-bar" title="Context window: ${pct}% full&#10;${newTok.toLocaleString()} new + ${agent.contextCacheTokens.toLocaleString()} cached = ${agent.contextTokens.toLocaleString()} / 200,000"><span class="detail-ctx-breakdown">${fmtK(newTok)} new · ${fmtK(agent.contextCacheTokens)} cached</span><span class="detail-ctx-track"><span class="detail-ctx-fill" style="width:${pct}%;background:${color}"></span></span><span class="detail-ctx-label" style="color:${color}">${pct}%</span></span>`;
+      })() : `<span>${tokens}</span>`}</div>
     </div>`;
   }
 

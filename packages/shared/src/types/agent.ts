@@ -42,6 +42,10 @@ export interface AgentState {
   totalOutputTokens: number;
   cacheReadTokens: number;
   cacheCreationTokens: number;
+  /** Total context fill for the most recent request: input_tokens + cache_read_input_tokens */
+  contextTokens: number;
+  /** Cache-read portion of contextTokens — how much of the context came from the prompt cache */
+  contextCacheTokens: number;
   model: string | null;
   colorIndex: number;
   /** Total number of tool_use events processed (for leaderboard) */

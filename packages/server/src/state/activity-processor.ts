@@ -204,6 +204,11 @@ function processToolUseActivity(
     agent.totalOutputTokens += activity.outputTokens ?? 0;
     agent.cacheReadTokens += activity.cacheReadTokens ?? 0;
     agent.cacheCreationTokens += activity.cacheCreationTokens ?? 0;
+    // Context fill = new tokens + cached tokens read (input_tokens alone excludes cache reads)
+    if (activity.inputTokens !== undefined) {
+      agent.contextTokens = (activity.inputTokens) + (activity.cacheReadTokens ?? 0);
+      agent.contextCacheTokens = activity.cacheReadTokens ?? 0;
+    }
   }
 }
 
@@ -248,6 +253,10 @@ export function processToolActivity(
         agent.totalOutputTokens += activity.outputTokens ?? 0;
         agent.cacheReadTokens += activity.cacheReadTokens ?? 0;
         agent.cacheCreationTokens += activity.cacheCreationTokens ?? 0;
+        if (activity.inputTokens !== undefined) {
+          agent.contextTokens = (activity.inputTokens) + (activity.cacheReadTokens ?? 0);
+      agent.contextCacheTokens = activity.cacheReadTokens ?? 0;
+        }
       }
       break;
 
@@ -259,6 +268,10 @@ export function processToolActivity(
       agent.totalOutputTokens += activity.outputTokens ?? 0;
       agent.cacheReadTokens += activity.cacheReadTokens ?? 0;
       agent.cacheCreationTokens += activity.cacheCreationTokens ?? 0;
+      if (activity.inputTokens !== undefined) {
+        agent.contextTokens = (activity.inputTokens) + (activity.cacheReadTokens ?? 0);
+      agent.contextCacheTokens = activity.cacheReadTokens ?? 0;
+      }
       anomalyDetector.checkTokenUsage(agentId, activity.inputTokens ?? 0, activity.outputTokens ?? 0);
       addHistory(agentId, {
         timestamp: now,

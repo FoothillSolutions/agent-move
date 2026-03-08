@@ -246,7 +246,18 @@ export class AgentDetailPanel {
 
     const tokenLine = this.panelEl.querySelector('#detail-token-line');
     if (tokenLine) {
-      tokenLine.innerHTML = `<span title="Total token usage">${tokens}</span>`;
+      const ctxPct = agent.contextTokens > 0 ? Math.round(agent.contextTokens / 200_000 * 100) : 0;
+      const ctxColor = ctxPct >= 90 ? '#ef4444' : ctxPct >= 75 ? '#f97316' : ctxPct >= 50 ? '#eab308' : '#22c55e';
+      const newTok = agent.contextTokens - agent.contextCacheTokens;
+      const fmtK = (n: number) => n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`;
+      const title = `Context window: ${ctxPct}% full\n${newTok.toLocaleString()} new + ${agent.contextCacheTokens.toLocaleString()} cached = ${agent.contextTokens.toLocaleString()} / 200,000`;
+      tokenLine.innerHTML = ctxPct > 0
+        ? `<span class="detail-ctx-bar" title="${title}">
+             <span class="detail-ctx-breakdown">${fmtK(newTok)} new · ${fmtK(agent.contextCacheTokens)} cached</span>
+             <span class="detail-ctx-track"><span class="detail-ctx-fill" style="width:${ctxPct}%;background:${ctxColor}"></span></span>
+             <span class="detail-ctx-label" style="color:${ctxColor}">${ctxPct}%</span>
+           </span>`
+        : `<span title="Total token usage">${tokens}</span>`;
     }
 
     // Update health dot

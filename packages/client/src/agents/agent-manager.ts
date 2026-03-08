@@ -166,6 +166,10 @@ export class AgentManager {
       sprite.rebuildTextures(customPalette, displayColorIndex, this.app.renderer);
     }
 
+    sprite.setContextHealth(
+      agent.contextTokens / this.getContextWindowSize(agent.model),
+      agent.contextCacheTokens / this.getContextWindowSize(agent.model),
+    );
     this.agents.set(agent.id, { sprite, state: agent, notifiedWaiting: false, lastSeenOutcome: null });
     this.world.addAgent(sprite.container);
 
@@ -176,6 +180,11 @@ export class AgentManager {
     this.updateChildBadges();
     this.sound?.play('spawn');
     this.notifications?.notifySpawn(displayName);
+  }
+
+  /** Context window size for Claude models (all current models = 200k tokens) */
+  private getContextWindowSize(_model: string | null): number {
+    return 200_000;
   }
 
   private onUpdate(agent: AgentState): void {
@@ -206,6 +215,10 @@ export class AgentManager {
     managed.sprite.setIdle(false);
     managed.sprite.setPlanning(agent.isPlanning);
     managed.sprite.setCompacting(agent.phase === 'compacting');
+    managed.sprite.setContextHealth(
+  agent.contextTokens / this.getContextWindowSize(agent.model),
+  agent.contextCacheTokens / this.getContextWindowSize(agent.model),
+);
 
     // Flash outcome ring when tool outcome changes
     if (agent.lastToolOutcome && agent.lastToolOutcome !== managed.lastSeenOutcome) {

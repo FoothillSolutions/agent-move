@@ -92,6 +92,10 @@ export class AgentSprite {
   private _hasAnomaly = false;
   private anomalyAutoClearTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // Context health bar (below sprite, above name label)
+  private contextBar: Graphics;
+  private _contextPct = 0;
+
   // Activity ring
   private activityRing: Graphics;
   private activityLevel = 0; // 0..1, decays over time
@@ -186,6 +190,11 @@ export class AgentSprite {
 
     // Draw initial name background
     this.updateNameBg();
+
+    // Context health bar — vertical bar on the right side of the sprite
+    this.contextBar = new Graphics();
+    this.container.addChild(this.contextBar);
+    this.setContextHealth(0); // draw empty track immediately
 
     // Speech bubble
     this.speechBubble = new SpeechBubble(this.spriteHeight);
@@ -341,6 +350,36 @@ export class AgentSprite {
 
     // Apply the current animation frame's texture immediately
     this.sprite.texture = this.textures.idle[0];
+  }
+
+  /** Update context window health bar. Vertical bar on the right side of the sprite. */
+  setContextHealth(pct: number, _cachePct = 0): void {
+    this._contextPct = Math.max(0, Math.min(1, pct));
+    const barW = 4;
+    const barH = this.spriteHeight;
+    const barX = this.spriteHeight / 2 + 4;
+    const barTopY = -barH / 2;
+
+    this.contextBar.clear();
+    this.contextBar.visible = true;
+
+    // Dark track (full height)
+    this.contextBar
+      .roundRect(barX, barTopY, barW, barH, 2)
+      .fill({ color: 0x000000, alpha: 0.4 });
+
+    if (this._contextPct > 0) {
+      let fillColor: number;
+      if (this._contextPct < 0.5) fillColor = 0x22c55e;
+      else if (this._contextPct < 0.75) fillColor = 0xeab308;
+      else if (this._contextPct < 0.9) fillColor = 0xf97316;
+      else fillColor = 0xef4444;
+
+      const fillH = Math.max(2, barH * this._contextPct);
+      this.contextBar
+        .roundRect(barX, barTopY + barH - fillH, barW, fillH, 2)
+        .fill({ color: fillColor, alpha: 0.9 });
+    }
   }
 
   setIdle(idle: boolean): void {
