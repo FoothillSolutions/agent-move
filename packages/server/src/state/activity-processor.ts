@@ -14,8 +14,6 @@ export const LONG_RUNNING_TOOLS = new Set([
   'WebSearch',
   // Tools that block waiting for user input
   'AskUserQuestion',
-  // Reasoning / extended thinking pseudo-tool (emitted for OpenCode reasoning parts)
-  'thinking',
   // Browser/playwright tools that wait for navigation or network
   'mcp__playwright__browser_navigate',
   'mcp__playwright__browser_wait_for',
@@ -257,7 +255,7 @@ export function processToolActivity(
         agent.cacheCreationTokens += activity.cacheCreationTokens ?? 0;
         if (activity.inputTokens !== undefined) {
           agent.contextTokens = (activity.inputTokens) + (activity.cacheReadTokens ?? 0);
-      agent.contextCacheTokens = activity.cacheReadTokens ?? 0;
+          agent.contextCacheTokens = activity.cacheReadTokens ?? 0;
         }
       }
       break;
@@ -272,7 +270,7 @@ export function processToolActivity(
       agent.cacheCreationTokens += activity.cacheCreationTokens ?? 0;
       if (activity.inputTokens !== undefined) {
         agent.contextTokens = (activity.inputTokens) + (activity.cacheReadTokens ?? 0);
-      agent.contextCacheTokens = activity.cacheReadTokens ?? 0;
+        agent.contextCacheTokens = activity.cacheReadTokens ?? 0;
       }
       anomalyDetector.checkTokenUsage(agentId, activity.inputTokens ?? 0, activity.outputTokens ?? 0);
       addHistory(agentId, {

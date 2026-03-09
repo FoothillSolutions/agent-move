@@ -54,6 +54,13 @@ export class OpenCodeWatcher implements AgentWatcher {
   private seenCallIds = new Set<string>();
   /** row id → true — deduplicates text/token events */
   private seenIds = new Set<string>();
+  /**
+   * Per-session completion timers: after step-finish, if no new step-start
+   * arrives within this window, call hookStop to idle the agent immediately.
+   * This handles /exit (session ends after step-finish, no more WAL writes).
+   */
+  private stepFinishTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private static readonly STEP_FINISH_IDLE_MS = 4000;
 
   // Prepared statements (initialised after DB opens)
   private stmtAllSessions!: Database.Statement;
@@ -119,6 +126,8 @@ export class OpenCodeWatcher implements AgentWatcher {
     this.messages.clear();
     this.seenCallIds.clear();
     this.seenIds.clear();
+    for (const t of this.stepFinishTimers.values()) clearTimeout(t);
+    this.stepFinishTimers.clear();
   }
 
   // ── Prepared statements ────────────────────────────────────────────────────
@@ -237,12 +246,12 @@ export class OpenCodeWatcher implements AgentWatcher {
     const activity = this.parser.parseTokenUsage(data);
     if (!activity) return;
 
+    // Cancel any pending step-finish idle timer
+    const prefixedId = this.prefixed(row.session_id);
+    this.cancelStepFinishTimer(prefixedId);
+
     const sessionInfo = this.getSessionInfo(row.session_id);
-    this.stateManager.processMessage(
-      this.prefixed(row.session_id),
-      activity,
-      sessionInfo,
-    );
+    this.stateManager.processMessage(prefixedId, activity, sessionInfo);
   }
 
   private processPartRow(row: PartRow) {
@@ -265,7 +274,21 @@ export class OpenCodeWatcher implements AgentWatcher {
     if (data.type === 'step-start' || data.type === 'step-finish') {
       if (this.seenIds.has(row.id)) return;
       this.seenIds.add(row.id);
-      this.stateManager.heartbeat(this.prefixed(row.session_id));
+      const prefixedId = this.prefixed(row.session_id);
+      if (data.type === 'step-start') {
+        // Cancel any pending completion timer — agent is still active
+        this.cancelStepFinishTimer(prefixedId);
+        this.stateManager.heartbeat(prefixedId);
+      } else {
+        // step-finish: start completion timer.
+        // If no new step-start arrives within the window, idle the agent.
+        this.cancelStepFinishTimer(prefixedId);
+        const timer = setTimeout(() => {
+          this.stepFinishTimers.delete(prefixedId);
+          this.stateManager.hookStop(prefixedId);
+        }, OpenCodeWatcher.STEP_FINISH_IDLE_MS);
+        this.stepFinishTimers.set(prefixedId, timer);
+      }
       return;
     }
 
@@ -282,11 +305,23 @@ export class OpenCodeWatcher implements AgentWatcher {
     const activity = this.parser.parsePart(data as any, messageData);
     if (!activity) return;
 
+    // Cancel any pending step-finish idle timer — real activity is arriving
+    const prefixedId = this.prefixed(row.session_id);
+    this.cancelStepFinishTimer(prefixedId);
+
     const sessionInfo = this.getSessionInfo(row.session_id);
-    this.stateManager.processMessage(this.prefixed(row.session_id), activity, sessionInfo);
+    this.stateManager.processMessage(prefixedId, activity, sessionInfo);
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
+
+  private cancelStepFinishTimer(prefixedId: string): void {
+    const timer = this.stepFinishTimers.get(prefixedId);
+    if (timer) {
+      clearTimeout(timer);
+      this.stepFinishTimers.delete(prefixedId);
+    }
+  }
 
   private getSessionInfo(sessionId: string): SessionInfo {
     const cached = this.sessions.get(sessionId);

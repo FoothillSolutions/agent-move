@@ -15,7 +15,7 @@ interface TokenSample {
 const VELOCITY_WINDOW = 60_000;
 const SAMPLE_INTERVAL = 2_000;
 
-export type NavTab = 'monitor' | 'analytics' | 'leaderboard' | 'toolchain' | 'taskgraph' | 'activity' | 'waterfall' | 'graph';
+export type NavTab = 'monitor' | 'analytics' | 'leaderboard' | 'toolchain' | 'taskgraph' | 'activity' | 'waterfall' | 'graph' | 'sessions';
 
 export class TopBar {
   private store: StateStore;

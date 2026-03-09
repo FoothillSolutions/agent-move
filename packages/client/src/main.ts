@@ -37,6 +37,8 @@ import { ActivityFeed } from './ui/activity-feed.js';
 import { WaterfallPanel } from './ui/waterfall-panel.js';
 import { RelationshipGraph } from './ui/relationship-graph.js';
 import { AgentHoverBar } from './ui/agent-hover-bar.js';
+import { SessionHistoryPanel } from './ui/session-history-panel.js';
+import { SessionComparisonPanel } from './ui/session-comparison-panel.js';
 
 async function main() {
   const appEl = document.getElementById('app')!;
@@ -137,6 +139,14 @@ async function main() {
 
   // ── Agent Relationship Graph (in right panel) ──
   const relationshipGraph = new RelationshipGraph(store, rightPanelContent);
+
+  // ── Session History (in right panel) & Comparison (full-screen modal) ──
+  const sessionHistoryPanel = new SessionHistoryPanel(rightPanelContent, store);
+  const sessionComparisonPanel = new SessionComparisonPanel();
+
+  sessionHistoryPanel.setCompareHandler((idA, idB) => {
+    sessionComparisonPanel.open(idA, idB);
+  });
 
   // ── Permission Panel (floating) ──
   const permissionPanel = new PermissionPanel(store);
@@ -260,6 +270,7 @@ async function main() {
     activity:    { show: () => activityFeed.show(), hide: () => activityFeed.hide(), title: 'Activity Feed' },
     waterfall:   { show: () => waterfallPanel.show(), hide: () => waterfallPanel.hide(), title: 'Waterfall' },
     graph:       { show: () => relationshipGraph.show(), hide: () => relationshipGraph.hide(), title: 'Agent Graph' },
+    sessions:    { show: () => sessionHistoryPanel.show(), hide: () => sessionHistoryPanel.hide(), title: 'Sessions' },
   };
 
   function switchRightPanel(tab: NavTab): void {
@@ -354,6 +365,7 @@ async function main() {
       case 'toggle-activity':    toggleTab('activity'); break;
       case 'toggle-waterfall':   toggleTab('waterfall'); break;
       case 'toggle-graph':       toggleTab('graph'); break;
+      case 'toggle-sessions':   toggleTab('sessions'); break;
       case 'timeline-live':      break;
     }
   }
@@ -443,6 +455,7 @@ async function main() {
     'v': 'toggle-activity',
     'w': 'toggle-waterfall',
     'r': 'toggle-graph',
+    's': 'toggle-sessions',
     '[': 'toggle-sidebar',
   };
 
@@ -470,6 +483,8 @@ async function main() {
     permissionPanel.dispose();
     waterfallPanel.destroy();
     activityFeed.destroy();
+    sessionHistoryPanel.dispose();
+    sessionComparisonPanel.dispose();
     minimap.dispose();
     store.dispose();
   });
