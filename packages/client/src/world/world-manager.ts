@@ -7,7 +7,7 @@ import { Camera } from './camera.js';
 import { LayoutEngine } from './layout-engine.js';
 import { DayNightCycle } from '../effects/day-night-cycle.js';
 import { FlowLines } from '../effects/flow-lines.js';
-import type { Theme } from './themes/theme-types.js';
+import type { GridRendererFn, Theme } from './themes/theme-types.js';
 
 /**
  * Layered scene management.
@@ -30,6 +30,7 @@ export class WorldManager {
   private _worldWidth = 1100;
   private _worldHeight = 980;
   private gridGraphics: import('pixi.js').Graphics;
+  private gridRendererFn: GridRendererFn | undefined;
   private resizeHandler: () => void;
   private resizeRaf = 0;
   private resizeObserver: ResizeObserver | null = null;
@@ -111,10 +112,7 @@ export class WorldManager {
       this._worldHeight = worldHeight;
 
       // Rebuild grid background
-      this.gridLayer.removeChildren();
-      this.gridGraphics.destroy();
-      this.gridGraphics = createGrid(worldWidth, worldHeight);
-      this.gridLayer.addChild(this.gridGraphics);
+      this.rebuildGrid();
 
       // Rebuild zone visuals from mutated ZONES array
       this.zoneRenderer.rebuild();
@@ -184,12 +182,17 @@ export class WorldManager {
 
   /** Apply a theme's decorators and background color */
   applyTheme(theme: Theme): void {
-    this.zoneRenderer.setThemeDecorators(theme.decorators);
+    this.zoneRenderer.setThemeDecorators(theme.decorators, theme.pixelRooms ?? false);
     this.app.renderer.background.color = theme.colors.background;
-    // Rebuild grid so the outdoor scenery uses the correct zone positions
+    this.gridRendererFn = theme.gridRenderer;
+    this.rebuildGrid();
+  }
+
+  /** Rebuild the grid/background using the current theme's renderer */
+  private rebuildGrid(): void {
     this.gridLayer.removeChildren();
     this.gridGraphics.destroy();
-    this.gridGraphics = createGrid(this._worldWidth, this._worldHeight);
+    this.gridGraphics = createGrid(this._worldWidth, this._worldHeight, this.gridRendererFn);
     this.gridLayer.addChild(this.gridGraphics);
   }
 
