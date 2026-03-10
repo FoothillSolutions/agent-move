@@ -9,7 +9,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AbdullahSAhmad/agent-move"
+    "url": "https://github.com/FoothillSolutions/agent-move"
   },
   "bin": {
     "agent-move": "bin/cli.js"

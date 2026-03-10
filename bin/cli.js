@@ -45,7 +45,7 @@ function troubleshooting() {
   console.log(`${c.dim}  Hooks not working?  ${c.reset}npx @foothill/agent-move hooks status`);
   console.log(`${c.dim}  Reinstall hooks:    ${c.reset}npx @foothill/agent-move hooks install`);
   console.log(`${c.dim}  Remove hooks:       ${c.reset}npx @foothill/agent-move hooks uninstall`);
-  console.log(`${c.dim}  Report issues:      ${c.reset}https://github.com/AbdullahSAhmad/agent-move/issues`);
+  console.log(`${c.dim}  Report issues:      ${c.reset}https://github.com/FoothillSolutions/agent-move/issues`);
   console.log();
 }
 
@@ -222,7 +222,7 @@ if (args[0] === 'hooks') {
     }
 
     console.error();
-    console.error(`${c.dim}  Need help? https://github.com/AbdullahSAhmad/agent-move/issues${c.reset}`);
+    console.error(`${c.dim}  Need help? https://github.com/FoothillSolutions/agent-move/issues${c.reset}`);
     console.error();
     process.exit(1);
   });
