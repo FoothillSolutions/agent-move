@@ -1,6 +1,6 @@
 {
   "name": "@foothill/agent-move",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Watch your AI coding agents come alive as pixel-art characters in a 2D world",
   "type": "module",
   "engines": {
