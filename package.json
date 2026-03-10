@@ -30,7 +30,7 @@
     "packages/client"
   ],
   "scripts": {
-    "dev": "concurrently -n server,client -c blue,green \"npm run dev -w @agent-move/server\" \"npm run dev -w @agent-move/client\"",
+    "dev": "npm run build -w @agent-move/shared && concurrently -n server,client -c blue,green \"npm run dev -w @agent-move/server\" \"npm run dev -w @agent-move/client\"",
     "build": "npm run build -w @agent-move/shared && npm run build -w @agent-move/server && npm run build -w @agent-move/client",
     "typecheck": "tsc -b",
     "prepublishOnly": "npm run build"
