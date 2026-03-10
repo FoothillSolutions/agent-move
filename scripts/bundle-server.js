@@ -24,12 +24,9 @@ await build({
   platform: 'node',
   format: 'esm',
   allowOverwrite: true,
-  banner: {
-    js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
-  },
   // Inline workspace packages, keep everything else external
   external: [
-    'fastify', '@fastify/*', 'chokidar',
+    'fastify', '@fastify/*', 'chokidar', 'better-sqlite3',
     'os', 'path', 'fs', 'url', 'events', 'stream', 'util', 'crypto',
     'child_process', 'http', 'https', 'net', 'tls', 'zlib', 'buffer',
     'node:*',
