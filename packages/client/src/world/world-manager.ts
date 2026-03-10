@@ -186,6 +186,11 @@ export class WorldManager {
   applyTheme(theme: Theme): void {
     this.zoneRenderer.setThemeDecorators(theme.decorators);
     this.app.renderer.background.color = theme.colors.background;
+    // Rebuild grid so the outdoor scenery uses the correct zone positions
+    this.gridLayer.removeChildren();
+    this.gridGraphics.destroy();
+    this.gridGraphics = createGrid(this._worldWidth, this._worldHeight);
+    this.gridLayer.addChild(this.gridGraphics);
   }
 
   /** Per-frame update */

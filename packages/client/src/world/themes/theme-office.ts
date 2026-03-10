@@ -12,9 +12,9 @@ export const officeTheme: Theme = {
   name: 'Office',
   icon: '🏢',
   colors: {
-    background: COLORS.background,
-    gridLine: 0x1a1e30,
-    gridLineSub: 0x14172a,
+    background: 0xb8cc88,  // Warm outdoor grass
+    gridLine: 0xa8bc78,
+    gridLineSub: 0x98ac68,
   },
   decorators: {
     search: ZONE_DECORATORS.search ?? fallback,

@@ -2,8 +2,8 @@ import { ZONES, GRID_COLS, ROW_WEIGHTS, updateWorldExports } from '@agent-move/s
 
 const MIN_ZONE_W = 120;
 const MIN_ZONE_H = 100;
-const EDGE_PAD = 12;
-const GAP = 8;
+const EDGE_PAD = 48;  // Outdoor border space (for trees/grass)
+const GAP = 4;        // Thin shared-wall gap between rooms
 
 /**
  * Responsive bento-grid layout engine.
