@@ -54,15 +54,13 @@ async function scanClaudeSessions(rootDir: string): Promise<string[]> {
   const results: string[] = [];
 
   try {
-    const projects = await readdir(rootDir);
+    const projects = await readdir(rootDir, { withFileTypes: true });
     const now = Date.now();
 
     for (const project of projects) {
-      const projectDir = join(rootDir, project);
+      if (!project.isDirectory()) continue;
+      const projectDir = join(rootDir, project.name);
       try {
-        const projectStat = await stat(projectDir);
-        if (!projectStat.isDirectory()) continue;
-
         const files = await readdir(projectDir);
         let newestFile: string | null = null;
         let newestMtime = 0;

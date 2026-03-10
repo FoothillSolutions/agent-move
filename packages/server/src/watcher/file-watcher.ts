@@ -46,6 +46,7 @@ export class FileWatcher implements AgentWatcher {
   stop(): void {
     void this.watcher?.close();
     this.byteOffsets.clear();
+    this.sessionIds.clear();
     this.fileLocks.clear();
   }
 

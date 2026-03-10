@@ -47,7 +47,6 @@ It uses a **hybrid data pipeline** — JSONL file watching for rich data (tokens
 ### Prerequisites
 
 - **Node.js 18+**
-- **`sqlite3` CLI** available if you want OpenCode session support
 - At least one supported agent installed and used at least once:
   - **Claude Code** (`~/.claude/projects/**/*.jsonl`)
   - **Codex** (`~/.codex/sessions/**/*.jsonl`)
