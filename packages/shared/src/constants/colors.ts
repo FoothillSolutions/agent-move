@@ -25,7 +25,7 @@ export const AGENT_PALETTES: AgentPalette[] = [
 
 /** Background and UI colors */
 export const COLORS = {
-  background: 0x1a1e38,
+  background: 0xe4d0b8,  // Warm peach outdoor (default — overridden by theme)
   gridLine: 0x16213e,
   zoneBackground: 0x0f3460,
   zoneBorder: 0xe94560,
