@@ -7,7 +7,7 @@
 A real-time pixel-art visualizer that turns AI coding sessions into a living 2D world. Agents walk between rooms, use tools, chat, and rest — all rendered at 60fps in your browser.
 
 ```
-npx agent-move@latest
+npx @foothill/agent-move@latest
 ```
 
 <br>
@@ -17,8 +17,8 @@ npx agent-move@latest
 <br>
 <br>
 
-[![npm version](https://img.shields.io/npm/v/agent-move)](https://www.npmjs.com/package/agent-move)
-[![license](https://img.shields.io/npm/l/agent-move)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/@foothill/agent-move)](https://www.npmjs.com/package/@foothill/agent-move)
+[![license](https://img.shields.io/npm/l/@foothill/agent-move)](LICENSE)
 
 </div>
 
@@ -53,7 +53,7 @@ It uses a **hybrid data pipeline** — JSONL file watching for rich data (tokens
 ### One Command
 
 ```bash
-npx agent-move@latest
+npx @foothill/agent-move@latest
 ```
 
 That's it. The server starts, hooks are auto-installed, your browser opens, and any active coding session is visualized immediately.
@@ -66,9 +66,9 @@ On first run, AgentMove automatically:
 ### Options
 
 ```bash
-npx agent-move@latest --port 4000    # custom port (default: 3333)
-npx agent-move@latest --no-open      # don't auto-open the browser
-npx agent-move@latest --help         # show all options
+npx @foothill/agent-move@latest --port 4000    # custom port (default: 3333)
+npx @foothill/agent-move@latest --no-open      # don't auto-open the browser
+npx @foothill/agent-move@latest --help         # show all options
 ```
 
 ### Hooks Management
@@ -76,9 +76,9 @@ npx agent-move@latest --help         # show all options
 Hooks are auto-installed on first run. You can also manage them manually:
 
 ```bash
-npx agent-move@latest hooks status      # check if hooks are installed
-npx agent-move@latest hooks install     # (re)install hooks
-npx agent-move@latest hooks uninstall   # remove hooks
+npx @foothill/agent-move@latest hooks status      # check if hooks are installed
+npx @foothill/agent-move@latest hooks install     # (re)install hooks
+npx @foothill/agent-move@latest hooks uninstall   # remove hooks
 ```
 
 AgentMove works without hooks too — it falls back to JSONL file watching. Hooks add precise session lifecycle, tool success/failure tracking, and permission management.
@@ -86,7 +86,7 @@ AgentMove works without hooks too — it falls back to JSONL file watching. Hook
 ### From Source (for development)
 
 ```bash
-git clone https://github.com/AbdullahSAhmad/agent-move.git
+git clone https://github.com/FoothillSolutions/agent-move.git
 cd agent-move
 npm install
 npm run dev
@@ -242,14 +242,14 @@ The WebSocket sends a `full_state` snapshot on connect, then incremental events:
 
 | Problem | Solution |
 |---------|----------|
-| Port already in use | `npx agent-move@latest --port 4444` |
-| Hooks not working | `npx agent-move@latest hooks status` to check, then `hooks install` to fix |
+| Port already in use | `npx @foothill/agent-move@latest --port 4444` |
+| Hooks not working | `npx @foothill/agent-move@latest hooks status` to check, then `hooks install` to fix |
 | No agents showing up | Make sure Claude Code is running — agents appear when sessions are active |
 | Build artifacts missing (from source) | Run `npm run build` |
 | Permission denied on port | Use a port above 1024: `--port 3333` |
 | Browser didn't open | Visit `http://localhost:3333` manually, or check `--no-open` flag |
 
-Need more help? [Open an issue](https://github.com/AbdullahSAhmad/agent-move/issues)
+Need more help? [Open an issue](https://github.com/FoothillSolutions/agent-move/issues)
 
 ## Tech Stack
 
