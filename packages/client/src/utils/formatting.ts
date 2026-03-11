@@ -64,6 +64,7 @@ const CLI_BADGES: Record<AgentType, { label: string; color: string; title: strin
   claude:   { label: 'CC', color: '#a78bfa', title: 'Claude Code' },
   opencode: { label: 'OC', color: '#22d3ee', title: 'OpenCode' },
   pi:       { label: 'PI', color: '#f59e0b', title: 'pi coding agent' },
+  codex:    { label: 'CX', color: '#10b981', title: 'Codex CLI' },
 };
 
 /** Return an HTML badge string indicating the CLI type (CC, OC, PI) */

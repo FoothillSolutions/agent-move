@@ -9,6 +9,7 @@ import type { AgentWatcher } from './watcher/agent-watcher.js';
 import { FileWatcher } from './watcher/claude/claude-watcher.js';
 import { OpenCodeWatcher } from './watcher/opencode/opencode-watcher.js';
 import { PiWatcher } from './watcher/pi/pi-watcher.js';
+import { CodexWatcher } from './watcher/codex/codex-watcher.js';
 import { AgentStateManager } from './state/agent-state-manager.js';
 import { Broadcaster } from './ws/broadcaster.js';
 import { registerWsHandler } from './ws/ws-handler.js';
@@ -68,6 +69,7 @@ export async function main() {
     new FileWatcher(config.claudeHome, stateManager),
     ...(config.enableOpenCode ? [new OpenCodeWatcher(stateManager)] : []),
     ...(config.enablePi ? [new PiWatcher(stateManager)] : []),
+    ...(config.enableCodex ? [new CodexWatcher(stateManager)] : []),
   ];
   for (const w of watchers) {
     await w.start();
