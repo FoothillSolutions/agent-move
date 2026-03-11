@@ -1,7 +1,7 @@
 import type { AgentState, ZoneId } from '@agent-move/shared';
 import { AGENT_PALETTES, ZONE_MAP, ZONES, getFunnyName, getProjectColorIndex } from '@agent-move/shared';
 import type { StateStore, ConnectionStatus } from '../connection/state-store.js';
-import { escapeHtml, escapeAttr, truncate, formatTokenPair, hexToCss } from '../utils/formatting.js';
+import { escapeHtml, escapeAttr, truncate, formatTokenPair, hexToCss, getCliBadge } from '../utils/formatting.js';
 
 type FilterMode = 'all' | 'active' | 'idle' | 'done' | ZoneId | `project:${string}`;
 
@@ -492,6 +492,7 @@ export class Overlay {
       font-size: 9px;
       margin-left: 4px;
     ">${escapeHtml(agent.projectName)}</span>` : '';
+    const cliBadge = getCliBadge(agent.agentType);
 
     // Status dot instead of opacity
     const statusClass = agent.isDone ? 'done' : agent.isIdle ? 'idle' : 'active';
@@ -503,7 +504,7 @@ export class Overlay {
       <div class="card-top-row">
         <div class="name">
           <span class="agent-status-dot ${statusClass}"></span>
-          ${isChild ? '<span class="child-connector">&#8627;</span>' : ''}${escapeHtml(name)}${this.roleBadge(agent.role)}${projectBadge}${doneBadge}${subBadge}
+          ${isChild ? '<span class="child-connector">&#8627;</span>' : ''}${escapeHtml(name)}${cliBadge}${this.roleBadge(agent.role)}${projectBadge}${doneBadge}${subBadge}
         </div>
         <div class="card-actions">
           <div class="agent-metrics">

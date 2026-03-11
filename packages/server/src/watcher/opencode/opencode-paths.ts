@@ -1,7 +1,7 @@
 import { homedir } from 'os';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import type { SessionInfo } from '../claude-paths.js';
+import type { SessionInfo } from '../types.js';
 
 /**
  * Find the OpenCode SQLite database file.
@@ -42,6 +42,7 @@ export function parseOpenCodeSession(row: OpenCodeSessionRow): SessionInfo {
   const projectName = segments[segments.length - 1] || 'opencode';
 
   return {
+    agentType: 'opencode',
     // Use the actual directory as projectPath so getGitBranch() gets a valid cwd.
     // projectDir uses the project_id hash to group agents belonging to the same project.
     projectPath: row.directory || row.project_id,

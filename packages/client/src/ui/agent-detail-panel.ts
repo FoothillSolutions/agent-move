@@ -1,7 +1,7 @@
 import type { AgentState, ActivityEntry } from '@agent-move/shared';
 import { AGENT_PALETTES, ZONE_MAP, getProjectColorIndex } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
-import { escapeHtml, escapeAttr, truncate, formatTokens, formatTokenPair, formatDuration, hexToCss } from '../utils/formatting.js';
+import { escapeHtml, escapeAttr, truncate, formatTokens, formatTokenPair, formatDuration, hexToCss, getCliBadge } from '../utils/formatting.js';
 
 /**
  * Slide-out detail panel for a selected agent.
@@ -277,6 +277,9 @@ export class AgentDetailPanel {
 
     // Uptime
     rows.push(this.infoRow('Uptime', formatDuration(Date.now() - agent.spawnedAt), 'How long this agent has been running'));
+
+    // CLI type
+    rows.push(this.infoRow('CLI', getCliBadge(agent.agentType), 'Agent CLI source'));
 
     // Model
     if (agent.model) {

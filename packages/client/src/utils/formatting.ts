@@ -56,3 +56,29 @@ export function formatDuration(ms: number): string {
 export function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
 }
+
+import type { AgentType } from '@agent-move/shared';
+
+/** CLI type badge config keyed by AgentType */
+const CLI_BADGES: Record<AgentType, { label: string; color: string; title: string }> = {
+  claude:   { label: 'CC', color: '#a78bfa', title: 'Claude Code' },
+  opencode: { label: 'OC', color: '#22d3ee', title: 'OpenCode' },
+  pi:       { label: 'PI', color: '#f59e0b', title: 'pi coding agent' },
+};
+
+/** Return an HTML badge string indicating the CLI type (CC, OC, PI) */
+export function getCliBadge(agentType: AgentType): string {
+  const match = CLI_BADGES[agentType];
+  return `<span class="cli-badge" title="${match.title}" style="
+    background: ${match.color}22;
+    color: ${match.color};
+    border: 1px solid ${match.color}44;
+    padding: 0 3px;
+    border-radius: 3px;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-left: 4px;
+    vertical-align: middle;
+  ">${match.label}</span>`;
+}
