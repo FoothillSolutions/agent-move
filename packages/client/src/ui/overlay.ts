@@ -492,7 +492,7 @@ export class Overlay {
       font-size: 9px;
       margin-left: 4px;
     ">${escapeHtml(agent.projectName)}</span>` : '';
-    const cliBadge = getCliBadge(agent.sessionId);
+    const cliBadge = getCliBadge(agent.agentType);
 
     // Status dot instead of opacity
     const statusClass = agent.isDone ? 'done' : agent.isIdle ? 'idle' : 'active';

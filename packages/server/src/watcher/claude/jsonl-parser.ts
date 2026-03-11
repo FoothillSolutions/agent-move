@@ -1,21 +1,5 @@
-import type { JsonlMessage, ContentBlock, ToolUseBlock, TextBlock } from '@agent-move/shared';
-
-export interface ParsedActivity {
-  type: 'tool_use' | 'text' | 'token_usage';
-  toolName?: string;
-  toolInput?: Record<string, unknown>;
-  text?: string;
-  inputTokens?: number;
-  outputTokens?: number;
-  cacheReadTokens?: number;
-  cacheCreationTokens?: number;
-  model?: string;
-  sessionId?: string;
-  /** Logical agent name discovered from SendMessage routing */
-  agentName?: string;
-  /** Sender name from <teammate-message teammate_id="X"> tags */
-  messageSender?: string;
-}
+import type { JsonlMessage, ToolUseBlock, TextBlock } from '@agent-move/shared';
+import type { ParsedActivity } from '../types.js';
 
 export class JsonlParser {
   parseLine(line: string): ParsedActivity | null {

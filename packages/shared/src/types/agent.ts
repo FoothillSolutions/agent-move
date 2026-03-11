@@ -2,12 +2,16 @@ import type { ZoneId } from './zone.js';
 
 export type AgentRole = 'main' | 'subagent' | 'team-lead' | 'team-member';
 
+/** CLI tool that produced this agent session */
+export type AgentType = 'claude' | 'opencode' | 'pi';
+
 /** Precise session lifecycle phase (hook-sourced when available, inferred otherwise) */
 export type AgentPhase = 'idle' | 'running' | 'compacting';
 
 export interface AgentState {
   id: string;
   sessionId: string;
+  agentType: AgentType;
   /** Root session ID — the top-level main agent's sessionId in this hierarchy.
    *  Used to scope all lookups so agents from different terminal sessions don't interact. */
   rootSessionId: string;

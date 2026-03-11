@@ -1,7 +1,7 @@
 import { homedir } from 'os';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import type { SessionInfo } from '../claude-paths.js';
+import type { SessionInfo } from '../types.js';
 import { resolveEncodedPath } from '../path-utils.js';
 
 /**
@@ -64,6 +64,7 @@ export function parsePiSessionInfo(
   const projectName = decodePiProjectDir(dirName);
 
   return {
+    agentType: 'pi',
     projectPath: header.cwd || dirName,
     projectName,
     isSubagent: !!header.parentSession,

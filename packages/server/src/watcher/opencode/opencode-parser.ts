@@ -1,4 +1,4 @@
-import type { ParsedActivity } from '../jsonl-parser.js';
+import type { ParsedActivity } from '../types.js';
 import { normalizeToolName, normalizeToolInput } from '@agent-move/shared';
 
 // ── OpenCode message data (serialised in message.data column) ─────────────────

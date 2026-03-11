@@ -279,7 +279,7 @@ export class AgentDetailPanel {
     rows.push(this.infoRow('Uptime', formatDuration(Date.now() - agent.spawnedAt), 'How long this agent has been running'));
 
     // CLI type
-    rows.push(this.infoRow('CLI', getCliBadge(agent.sessionId), 'Agent CLI source'));
+    rows.push(this.infoRow('CLI', getCliBadge(agent.agentType), 'Agent CLI source'));
 
     // Model
     if (agent.model) {

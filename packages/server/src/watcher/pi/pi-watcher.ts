@@ -2,7 +2,8 @@ import chokidar from 'chokidar';
 import { stat, open } from 'fs/promises';
 import { join, basename, dirname } from 'path';
 import type { AgentStateManager } from '../../state/agent-state-manager.js';
-import type { SessionInfo } from '../claude-paths.js';
+import { createFallbackSession } from '../types.js';
+import type { SessionInfo } from '../types.js';
 import type { AgentWatcher } from '../agent-watcher.js';
 import { PiParser } from './pi-parser.js';
 import { SessionScanner } from '../session-scanner.js';
@@ -151,13 +152,8 @@ export class PiWatcher implements AgentWatcher {
 
   private buildFallbackSession(filePath: string): SessionInfo {
     const dirName = this.getProjectDirName(filePath);
-    return {
-      projectPath: dirName,
-      projectName: dirName.replace(/^--|--$/g, '') || 'pi',
-      isSubagent: false,
-      projectDir: dirName,
-      parentSessionId: null,
-    };
+    const name = dirName.replace(/^--|--$/g, '') || 'pi';
+    return createFallbackSession('pi', name);
   }
 
   /**

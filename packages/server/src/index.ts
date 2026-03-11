@@ -6,7 +6,7 @@ import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import { config } from './config.js';
 import type { AgentWatcher } from './watcher/agent-watcher.js';
-import { FileWatcher } from './watcher/file-watcher.js';
+import { FileWatcher } from './watcher/claude/claude-watcher.js';
 import { OpenCodeWatcher } from './watcher/opencode/opencode-watcher.js';
 import { PiWatcher } from './watcher/pi/pi-watcher.js';
 import { AgentStateManager } from './state/agent-state-manager.js';

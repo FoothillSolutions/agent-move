@@ -1,14 +1,5 @@
-import { resolveEncodedPath } from './path-utils.js';
-
-export interface SessionInfo {
-  projectPath: string;
-  projectName: string;
-  isSubagent: boolean;
-  /** The encoded project directory (shared by main + subagents of the same project) */
-  projectDir: string;
-  /** The parent session ID extracted from the path (for subagents) */
-  parentSessionId: string | null;
-}
+import { resolveEncodedPath } from '../path-utils.js';
+import type { SessionInfo } from '../types.js';
 
 class ClaudePaths {
   /**
@@ -24,6 +15,7 @@ class ClaudePaths {
     const projectsIdx = parts.indexOf('projects');
     if (projectsIdx === -1 || projectsIdx + 1 >= parts.length) {
       return {
+        agentType: 'claude',
         projectPath: 'unknown',
         projectName: 'Unknown',
         isSubagent: false,
@@ -45,6 +37,7 @@ class ClaudePaths {
     const parentSessionId = isSubagent ? parts[projectsIdx + 2] : null;
 
     return {
+      agentType: 'claude',
       projectPath: encodedProjectName,
       projectName,
       isSubagent,

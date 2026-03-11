@@ -1,11 +1,11 @@
 import chokidar from 'chokidar';
 import { stat, open } from 'fs/promises';
 import { join, basename } from 'path';
-import type { AgentStateManager } from '../state/agent-state-manager.js';
+import type { AgentStateManager } from '../../state/agent-state-manager.js';
 import { JsonlParser } from './jsonl-parser.js';
 import { claudePaths } from './claude-paths.js';
-import { SessionScanner } from './session-scanner.js';
-import type { AgentWatcher } from './agent-watcher.js';
+import { SessionScanner } from '../session-scanner.js';
+import type { AgentWatcher } from '../agent-watcher.js';
 
 export class FileWatcher implements AgentWatcher {
   private watcher: chokidar.FSWatcher | null = null;

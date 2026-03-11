@@ -57,16 +57,18 @@ export function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
 }
 
-/** CLI type badge config derived from session ID prefix */
-const CLI_BADGES: { prefix: string; label: string; color: string; title: string }[] = [
-  { prefix: 'pi:',  label: 'PI', color: '#f59e0b', title: 'pi coding agent' },
-  { prefix: 'oc:',  label: 'OC', color: '#22d3ee', title: 'OpenCode' },
-];
-const DEFAULT_CLI_BADGE = { label: 'CC', color: '#a78bfa', title: 'Claude Code' };
+import type { AgentType } from '@agent-move/shared';
+
+/** CLI type badge config keyed by AgentType */
+const CLI_BADGES: Record<AgentType, { label: string; color: string; title: string }> = {
+  claude:   { label: 'CC', color: '#a78bfa', title: 'Claude Code' },
+  opencode: { label: 'OC', color: '#22d3ee', title: 'OpenCode' },
+  pi:       { label: 'PI', color: '#f59e0b', title: 'pi coding agent' },
+};
 
 /** Return an HTML badge string indicating the CLI type (CC, OC, PI) */
-export function getCliBadge(sessionId: string): string {
-  const match = CLI_BADGES.find((b) => sessionId.startsWith(b.prefix)) ?? DEFAULT_CLI_BADGE;
+export function getCliBadge(agentType: AgentType): string {
+  const match = CLI_BADGES[agentType];
   return `<span class="cli-badge" title="${match.title}" style="
     background: ${match.color}22;
     color: ${match.color};

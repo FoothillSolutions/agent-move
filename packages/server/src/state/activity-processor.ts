@@ -1,6 +1,6 @@
 import type { AgentState, ActivityEntry } from '@agent-move/shared';
 import { getZoneForTool } from '@agent-move/shared';
-import type { ParsedActivity } from '../watcher/jsonl-parser.js';
+import type { ParsedActivity } from '../watcher/types.js';
 import { getGitBranch } from '../watcher/git-info.js';
 import type { AnomalyDetector } from './anomaly-detector.js';
 import type { ToolChainTracker } from './tool-chain-tracker.js';
