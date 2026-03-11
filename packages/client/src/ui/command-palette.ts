@@ -265,6 +265,14 @@ export class CommandPalette {
       category: 'feature',
       action: () => this.onCommand('toggle-graph'),
     });
+    this.actions.push({
+      id: 'feature:settings',
+      label: 'Open Settings',
+      description: 'Sound, notifications, cost alerts, display (S)',
+      icon: '⚙',
+      category: 'feature',
+      action: () => this.onCommand('toggle-settings'),
+    });
   }
 
   /** Dynamically add agent-specific actions */

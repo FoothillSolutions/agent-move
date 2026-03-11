@@ -1,5 +1,5 @@
 import type { AgentState, ZoneId } from '@agent-move/shared';
-import { AGENT_PALETTES, ZONE_MAP, getModelPricing } from '@agent-move/shared';
+import { AGENT_PALETTES, ZONE_MAP, computeAgentCost } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
 import { formatTokens, formatDuration } from '../utils/formatting.js';
 
@@ -82,9 +82,7 @@ export class SessionExport {
     const agentStats: { name: string; cost: number; tokens: number; duration: number; role: string; zone: string; status: string }[] = [];
 
     for (const a of agents) {
-      const pricing = getModelPricing(a.model);
-      const cost = (a.totalInputTokens / 1_000_000) * pricing.input +
-                   (a.totalOutputTokens / 1_000_000) * pricing.output;
+      const cost = computeAgentCost(a);
       totalCost += cost;
       totalInput += a.totalInputTokens;
       totalOutput += a.totalOutputTokens;
