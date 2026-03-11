@@ -3,7 +3,7 @@ import type { ZoneId } from './zone.js';
 export type AgentRole = 'main' | 'subagent' | 'team-lead' | 'team-member';
 
 /** CLI tool that produced this agent session */
-export type AgentType = 'claude' | 'opencode' | 'pi';
+export type AgentType = 'claude' | 'opencode' | 'pi' | 'codex';
 
 /** Precise session lifecycle phase (hook-sourced when available, inferred otherwise) */
 export type AgentPhase = 'idle' | 'running' | 'compacting';

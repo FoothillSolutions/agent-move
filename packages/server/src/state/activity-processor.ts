@@ -84,7 +84,7 @@ function processToolUseActivity(
   toolChainTracker.recordToolUse(agentId, toolName);
 
   // Task graph tracking
-  if (toolName === 'TaskCreate' || toolName === 'TaskUpdate') {
+  if (toolName === 'TaskCreate' || toolName === 'TaskUpdate' || toolName === 'TodoWrite') {
     const graphChanged = taskGraphManager.processToolUse(
       agentId,
       agent.agentName ?? agentId.slice(0, 10),
