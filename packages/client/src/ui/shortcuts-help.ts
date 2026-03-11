@@ -61,6 +61,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: 'V', description: 'Toggle activity feed' },
       { keys: 'W', description: 'Toggle waterfall trace view' },
       { keys: 'R', description: 'Toggle agent relationship graph' },
+      { keys: 'S', description: 'Open settings panel' },
     ],
   },
 ];

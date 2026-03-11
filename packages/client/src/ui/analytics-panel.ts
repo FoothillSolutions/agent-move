@@ -53,6 +53,11 @@ export class AnalyticsPanel {
     this._customizationLookup = lookup;
   }
 
+  setCostThreshold(value: number): void {
+    this.costThreshold = value;
+    this.thresholdAlerted = false;
+  }
+
   constructor(store: StateStore, container: HTMLElement) {
     this.store = store;
     this.containerEl = container;

@@ -309,6 +309,12 @@ export class AgentSprite {
     this.updateNameBg();
   }
 
+  /** Show or hide the name label and its background */
+  setNameVisible(visible: boolean): void {
+    this.nameLabel.visible = visible;
+    this.nameBg.visible = visible;
+  }
+
   /** Redraw the dark pill behind the name + project labels */
   private updateNameBg(): void {
     this.nameBg.clear();

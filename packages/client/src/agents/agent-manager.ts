@@ -34,6 +34,7 @@ export class AgentManager {
   private _focusedAgentId: string | null = null;
   private _onAgentClick: ((agentId: string) => void) | null = null;
   private _onAgentHover: ((agentId: string | null, x: number, y: number) => void) | null = null;
+  private _showNames = true;
   private _customizationLookup: ((agent: AgentState) => { displayName: string; colorIndex: number }) | null = null;
   private onSpawnBound: (agent: AgentState) => void;
   private onUpdateBound: (agent: AgentState) => void;
@@ -63,6 +64,15 @@ export class AgentManager {
   /** Set a lookup function to resolve customized display name + color from agent state */
   setCustomizationLookup(lookup: (agent: AgentState) => { displayName: string; colorIndex: number }): void {
     this._customizationLookup = lookup;
+  }
+
+  /** Show or hide agent name labels on all sprites */
+  setShowNames(visible: boolean): void {
+    if (visible === this._showNames) return;
+    this._showNames = visible;
+    for (const m of this.agents.values()) {
+      m.sprite.setNameVisible(visible);
+    }
   }
 
   /** Get the display name for an agent, respecting customizations */
@@ -170,6 +180,7 @@ export class AgentManager {
       agent.contextTokens / this.getContextWindowSize(agent.model),
       agent.contextCacheTokens / this.getContextWindowSize(agent.model),
     );
+    if (!this._showNames) sprite.setNameVisible(false);
     this.agents.set(agent.id, { sprite, state: agent, notifiedWaiting: false, lastSeenOutcome: null });
     this.world.addAgent(sprite.container);
 
