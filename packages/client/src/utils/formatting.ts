@@ -56,3 +56,27 @@ export function formatDuration(ms: number): string {
 export function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
 }
+
+/** CLI type badge config derived from session ID prefix */
+const CLI_BADGES: { prefix: string; label: string; color: string; title: string }[] = [
+  { prefix: 'pi:',  label: 'PI', color: '#f59e0b', title: 'pi coding agent' },
+  { prefix: 'oc:',  label: 'OC', color: '#22d3ee', title: 'OpenCode' },
+];
+const DEFAULT_CLI_BADGE = { label: 'CC', color: '#a78bfa', title: 'Claude Code' };
+
+/** Return an HTML badge string indicating the CLI type (CC, OC, PI) */
+export function getCliBadge(sessionId: string): string {
+  const match = CLI_BADGES.find((b) => sessionId.startsWith(b.prefix)) ?? DEFAULT_CLI_BADGE;
+  return `<span class="cli-badge" title="${match.title}" style="
+    background: ${match.color}22;
+    color: ${match.color};
+    border: 1px solid ${match.color}44;
+    padding: 0 3px;
+    border-radius: 3px;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-left: 4px;
+    vertical-align: middle;
+  ">${match.label}</span>`;
+}

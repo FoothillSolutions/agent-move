@@ -84,7 +84,7 @@ export function getZoneForTool(toolName: string): ZoneId {
  * so the rest of the pipeline only ever sees canonical names.
  */
 const TOOL_NAME_MAP: Record<string, string> = {
-  // OpenCode lowercase → canonical PascalCase
+  // OpenCode / pi lowercase → canonical PascalCase
   read: 'Read',
   write: 'Write',
   edit: 'Edit',
@@ -96,6 +96,11 @@ const TOOL_NAME_MAP: Record<string, string> = {
   webfetch: 'WebFetch',
   todoread: 'TodoRead',
   todowrite: 'TodoWrite',
+  // pi-specific tool names
+  'edit-diff': 'Patch',
+  find: 'Glob',
+  ls: 'Bash',
+  truncate: 'Write',
 };
 
 /** Normalize an agent-specific tool name to the canonical form. */

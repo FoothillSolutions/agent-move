@@ -21,7 +21,7 @@ export class FileWatcher implements AgentWatcher {
 
   async start(): Promise<void> {
     // Scan and replay recently-active session files on startup
-    const scanner = new SessionScanner(this.claudeHome);
+    const scanner = new SessionScanner(join(this.claudeHome, 'projects'));
     const existingFiles = await scanner.scan();
 
     // Process existing files sequentially — main session must be processed

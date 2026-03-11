@@ -1,6 +1,4 @@
-import { basename, dirname, sep } from 'path';
-import { existsSync } from 'fs';
-import { join } from 'path';
+import { resolveEncodedPath } from './path-utils.js';
 
 export interface SessionInfo {
   projectPath: string;
@@ -61,73 +59,23 @@ class ClaudePaths {
    * e.g., "C--projects-fts-temp-agent-move" → "agent-move"
    */
   decodeProjectName(encoded: string): string {
-    const resolved = this.resolveToFolderName(encoded);
-    if (resolved) return resolved;
+    // Windows: drive letter encoding e.g. "C--projects-foo" → C:/
+    const driveMatch = encoded.match(/^([A-Za-z])--(.*)/);
+    // Unix: root slash encoding e.g. "-Users-john-foo" → /
+    const unixMatch = !driveMatch && encoded.match(/^-(.*)/);
+
+    if (driveMatch) {
+      const resolved = resolveEncodedPath(driveMatch[1] + ':/', driveMatch[2]);
+      if (resolved) return resolved;
+    } else if (unixMatch) {
+      const resolved = resolveEncodedPath('/', unixMatch[1]);
+      if (resolved) return resolved;
+    }
 
     // Fallback: last 2 dash-segments joined
     const parts = encoded.split('-').filter((p) => p.length > 0);
     if (parts.length <= 2) return parts.join('/');
     return parts.slice(-2).join('/');
-  }
-
-  /**
-   * Greedily resolve the encoded path against the filesystem.
-   * Tries each dash-segment as a directory, joining multiple segments
-   * when a single one doesn't exist (to handle dashes in folder names).
-   */
-  private resolveToFolderName(encoded: string): string | null {
-    try {
-      let root: string;
-      let rest: string;
-
-      // Windows: drive letter encoding e.g. "C--projects-foo"  → C:/
-      const driveMatch = encoded.match(/^([A-Za-z])--(.*)/);
-      // Unix: root slash encoding e.g. "-Users-john-foo"  → /
-      const unixMatch = !driveMatch && encoded.match(/^-(.*)/);
-
-      if (driveMatch) {
-        root = driveMatch[1] + ':/';
-        rest = driveMatch[2];
-      } else if (unixMatch) {
-        root = '/';
-        rest = unixMatch[1];
-      } else {
-        return null;
-      }
-
-      const parts = rest.split('-').filter(Boolean);
-
-      let currentPath = root;
-      let lastName = '';
-      let i = 0;
-
-      while (i < parts.length) {
-        let found = false;
-        const maxLen = Math.min(parts.length - i, 6);
-
-        for (let len = 1; len <= maxLen; len++) {
-          const segment = parts.slice(i, i + len).join('-');
-
-          // Try normal path, then dot-prefixed (for hidden dirs like .claude)
-          for (const prefix of ['', '.']) {
-            const testPath = join(currentPath, prefix + segment);
-            if (existsSync(testPath)) {
-              currentPath = testPath;
-              lastName = prefix + segment;
-              i += len;
-              found = true;
-              break;
-            }
-          }
-          if (found) break;
-        }
-        if (!found) break;
-      }
-
-      return lastName || null;
-    } catch {
-      return null;
-    }
   }
 }
 
