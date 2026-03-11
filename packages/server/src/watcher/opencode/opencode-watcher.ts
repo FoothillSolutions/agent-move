@@ -1,7 +1,8 @@
 import chokidar from 'chokidar';
 import Database from 'better-sqlite3';
 import type { AgentStateManager } from '../../state/agent-state-manager.js';
-import type { SessionInfo } from '../claude-paths.js';
+import { createFallbackSession } from '../types.js';
+import type { SessionInfo } from '../types.js';
 import { config } from '../../config.js';
 import {
   getOpenCodeDbPath,
@@ -337,12 +338,6 @@ export class OpenCodeWatcher implements AgentWatcher {
   }
 
   private fallbackSession(): SessionInfo {
-    return {
-      projectPath: 'opencode',
-      projectName: 'opencode',
-      isSubagent: false,
-      projectDir: 'opencode',
-      parentSessionId: null,
-    };
+    return createFallbackSession('opencode', 'opencode');
   }
 }

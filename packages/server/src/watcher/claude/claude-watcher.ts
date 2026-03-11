@@ -1,11 +1,11 @@
 import chokidar from 'chokidar';
 import { stat, open } from 'fs/promises';
 import { join, basename } from 'path';
-import type { AgentStateManager } from '../state/agent-state-manager.js';
+import type { AgentStateManager } from '../../state/agent-state-manager.js';
 import { JsonlParser } from './jsonl-parser.js';
 import { claudePaths } from './claude-paths.js';
-import { SessionScanner } from './session-scanner.js';
-import type { AgentWatcher } from './agent-watcher.js';
+import { SessionScanner } from '../session-scanner.js';
+import type { AgentWatcher } from '../agent-watcher.js';
 
 export class FileWatcher implements AgentWatcher {
   private watcher: chokidar.FSWatcher | null = null;
@@ -21,7 +21,7 @@ export class FileWatcher implements AgentWatcher {
 
   async start(): Promise<void> {
     // Scan and replay recently-active session files on startup
-    const scanner = new SessionScanner(this.claudeHome);
+    const scanner = new SessionScanner(join(this.claudeHome, 'projects'));
     const existingFiles = await scanner.scan();
 
     // Process existing files sequentially — main session must be processed

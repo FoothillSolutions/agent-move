@@ -11,4 +11,8 @@ export const config = {
   activeThresholdMs: 10 * 60 * 1000, // 10 minutes
   /** Enable OpenCode session watching (auto-detected if storage dir exists) */
   enableOpenCode: process.env.AGENT_MOVE_OPENCODE !== 'false',
+  /** Enable pi coding agent session watching (auto-detected if sessions dir exists) */
+  enablePi: process.env.AGENT_MOVE_PI !== 'false',
+  /** Enable Codex CLI session watching (auto-detected if sessions dir exists) */
+  enableCodex: process.env.AGENT_MOVE_CODEX !== 'false',
 } as const;

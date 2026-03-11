@@ -2,8 +2,7 @@ import { EventEmitter } from 'events';
 import type { AgentState, AgentEvent, AgentPhase, ZoneId, ActivityEntry, TimelineEvent, AnomalyEvent, ToolChainData, TaskGraphData } from '@agent-move/shared';
 import { getZoneForTool, getProjectColorIndex } from '@agent-move/shared';
 import { config } from '../config.js';
-import type { ParsedActivity } from '../watcher/jsonl-parser.js';
-import type { SessionInfo } from '../watcher/claude-paths.js';
+import type { ParsedActivity, SessionInfo } from '../watcher/types.js';
 import { getGitBranch } from '../watcher/git-info.js';
 import { AnomalyDetector } from './anomaly-detector.js';
 import { ToolChainTracker } from './tool-chain-tracker.js';
@@ -368,6 +367,7 @@ export class AgentStateManager extends EventEmitter {
       agent = {
         id: sessionId,
         sessionId,
+        agentType: sessionInfo.agentType,
         rootSessionId,
         projectPath: sessionInfo.projectPath,
         projectName: sessionInfo.projectName,

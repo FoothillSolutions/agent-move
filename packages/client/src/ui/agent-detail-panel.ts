@@ -1,7 +1,7 @@
 import type { AgentState, ActivityEntry } from '@agent-move/shared';
-import { AGENT_PALETTES, ZONE_MAP, getProjectColorIndex } from '@agent-move/shared';
+import { AGENT_PALETTES, ZONE_MAP, getProjectColorIndex, getContextWindow } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
-import { escapeHtml, escapeAttr, truncate, formatTokens, formatTokenPair, formatDuration, hexToCss } from '../utils/formatting.js';
+import { escapeHtml, escapeAttr, truncate, formatTokens, formatTokenPair, formatDuration, hexToCss, getCliBadge } from '../utils/formatting.js';
 
 /**
  * Slide-out detail panel for a selected agent.
@@ -246,13 +246,15 @@ export class AgentDetailPanel {
 
     const tokenLine = this.panelEl.querySelector('#detail-token-line');
     if (tokenLine) {
-      const ctxPct = agent.contextTokens > 0 ? Math.round(agent.contextTokens / 200_000 * 100) : 0;
+      const ctxWindow = getContextWindow(agent.model);
+      const ctxPct = agent.contextTokens > 0 ? Math.round(agent.contextTokens / ctxWindow * 100) : 0;
       const ctxColor = ctxPct >= 90 ? '#ef4444' : ctxPct >= 75 ? '#f97316' : ctxPct >= 50 ? '#eab308' : '#22c55e';
+      const newTok = agent.contextTokens - agent.contextCacheTokens;
       const fmtK = (n: number) => n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`;
-      const title = `Context window: ${ctxPct}% full\n${agent.contextTokens.toLocaleString()} / 200,000 tokens`;
+      const title = `Context window: ${ctxPct}% full\n${newTok.toLocaleString()} new + ${agent.contextCacheTokens.toLocaleString()} cached = ${agent.contextTokens.toLocaleString()} / ${ctxWindow.toLocaleString()}`;
       tokenLine.innerHTML = ctxPct > 0
         ? `<span class="detail-ctx-bar" title="${title}">
-             <span class="detail-ctx-breakdown">${fmtK(agent.contextTokens)} tokens</span>
+             <span class="detail-ctx-breakdown">${fmtK(newTok)} new · ${fmtK(agent.contextCacheTokens)} cached</span>
              <span class="detail-ctx-track"><span class="detail-ctx-fill" style="width:${ctxPct}%;background:${ctxColor}"></span></span>
              <span class="detail-ctx-label" style="color:${ctxColor}">${ctxPct}%</span>
            </span>`
@@ -276,6 +278,9 @@ export class AgentDetailPanel {
 
     // Uptime
     rows.push(this.infoRow('Uptime', formatDuration(Date.now() - agent.spawnedAt), 'How long this agent has been running'));
+
+    // CLI type
+    rows.push(this.infoRow('CLI', getCliBadge(agent.agentType), 'Agent CLI source'));
 
     // Model
     if (agent.model) {

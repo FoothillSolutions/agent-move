@@ -4,10 +4,10 @@
 
 **Watch your AI coding agents come alive.**
 
-A real-time pixel-art visualizer that turns AI coding sessions into a living 2D world. Agents walk between rooms, use tools, chat, and rest — all rendered at 60fps in your browser.
+A real-time pixel-art visualizer that turns AI coding sessions into a living 2D world. Supports **Claude Code**, **OpenCode**, **Codex CLI**, and **pi** — agents walk between rooms, use tools, chat, and rest — all rendered at 60fps in your browser.
 
 ```
-npx agent-move@latest
+npx @foothill/agent-move@latest
 ```
 
 <br>
@@ -17,8 +17,8 @@ npx agent-move@latest
 <br>
 <br>
 
-[![npm version](https://img.shields.io/npm/v/agent-move)](https://www.npmjs.com/package/agent-move)
-[![license](https://img.shields.io/npm/l/agent-move)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/@foothill/agent-move)](https://www.npmjs.com/package/@foothill/agent-move)
+[![license](https://img.shields.io/npm/l/@foothill/agent-move)](LICENSE)
 
 </div>
 
@@ -28,7 +28,18 @@ npx agent-move@latest
 
 AgentMove reads AI coding agent session files and maps every tool call to one of **9 activity zones**. Each agent gets a unique pixel-art character that physically walks between zones as it works.
 
-It uses a **hybrid data pipeline** — JSONL file watching for rich data (tokens, costs, full text) combined with Claude Code hooks for precise lifecycle events (session start/end, tool success/failure, permissions).
+### Supported CLIs
+
+| CLI | Badge | Session Format | Auto-detected |
+|-----|-------|---------------|---------------|
+| **Claude Code** | `CC` | JSONL + Hooks | `~/.claude/projects/` |
+| **OpenCode** | `OC` | SQLite WAL | `~/.opencode/` |
+| **Codex CLI** | `CX` | JSONL | `~/.codex/sessions/` |
+| **pi** | `PI` | JSONL | `~/.pi-agent/sessions/` |
+
+All CLIs are watched simultaneously — you can run agents from different tools and see them all in the same world.
+
+It uses a **hybrid data pipeline** — JSONL/SQLite file watching for rich data (tokens, costs, full text) combined with Claude Code hooks for precise lifecycle events (session start/end, tool success/failure, permissions).
 
 | Zone | What Happens There | Tools |
 |------|--------------------|-------|
@@ -47,13 +58,13 @@ It uses a **hybrid data pipeline** — JSONL file watching for rich data (tokens
 ### Prerequisites
 
 - **Node.js 18+**
-- **Claude Code** installed and used at least once (so `~/.claude/` exists)
+- At least one supported CLI installed: **Claude Code**, **OpenCode**, **Codex CLI**, or **pi**
 - Works on **Windows**, **macOS**, and **Linux**
 
 ### One Command
 
 ```bash
-npx agent-move@latest
+npx @foothill/agent-move@latest
 ```
 
 That's it. The server starts, hooks are auto-installed, your browser opens, and any active coding session is visualized immediately.
@@ -66,19 +77,29 @@ On first run, AgentMove automatically:
 ### Options
 
 ```bash
-npx agent-move@latest --port 4000    # custom port (default: 3333)
-npx agent-move@latest --no-open      # don't auto-open the browser
-npx agent-move@latest --help         # show all options
+npx @foothill/agent-move@latest --port 4000    # custom port (default: 3333)
+npx @foothill/agent-move@latest --no-open      # don't auto-open the browser
+npx @foothill/agent-move@latest --help         # show all options
 ```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AGENT_MOVE_OPENCODE` | `true` | Enable/disable OpenCode watching |
+| `AGENT_MOVE_PI` | `true` | Enable/disable pi watching |
+| `AGENT_MOVE_CODEX` | `true` | Enable/disable Codex CLI watching |
+
+Set to `false` to disable a specific watcher (e.g., `AGENT_MOVE_CODEX=false`).
 
 ### Hooks Management
 
 Hooks are auto-installed on first run. You can also manage them manually:
 
 ```bash
-npx agent-move@latest hooks status      # check if hooks are installed
-npx agent-move@latest hooks install     # (re)install hooks
-npx agent-move@latest hooks uninstall   # remove hooks
+npx @foothill/agent-move@latest hooks status      # check if hooks are installed
+npx @foothill/agent-move@latest hooks install     # (re)install hooks
+npx @foothill/agent-move@latest hooks uninstall   # remove hooks
 ```
 
 AgentMove works without hooks too — it falls back to JSONL file watching. Hooks add precise session lifecycle, tool success/failure tracking, and permission management.
@@ -86,7 +107,7 @@ AgentMove works without hooks too — it falls back to JSONL file watching. Hook
 ### From Source (for development)
 
 ```bash
-git clone https://github.com/AbdullahSAhmad/agent-move.git
+git clone https://github.com/FoothillSolutions/agent-move.git
 cd agent-move
 npm install
 npm run dev
@@ -112,6 +133,7 @@ This starts the server on `:3333` and the Vite dev server on `:5173` with hot re
 - **12 color palettes** — each agent gets a distinct look
 - **6 sprite variants** — Human, Robot, Wizard, Ninja, Skeleton, Slime
 - **Animations** — idle breathing, walking between zones, working effects
+- **CLI type badges** — CC, OC, CX, PI identify which tool spawned the agent
 - **Role badges** — MAIN, SUB, LEAD, MEMBER based on session type
 - **Speech bubbles** — show the current tool or text output above each agent
 - **Relationship lines** — dashed connections between parent/child and team agents
@@ -145,6 +167,13 @@ This starts the server on `:3333` and the Vite dev server on `:5173` with hot re
 - **Session duration** — per-agent uptime with active/idle status
 - **Cost threshold alerts** — configurable budget alert with visual notification
 
+### Task Graph
+
+- **Multi-format support** — tracks tasks from Claude Code (`TaskCreate`/`TaskUpdate`), OpenCode (`TodoWrite`), and Codex (`update_plan`)
+- **Live status** — pending, in-progress, completed, deleted with real-time updates
+- **Dependency tracking** — blocks/blockedBy relationships between tasks
+- **Per-team scoping** — task IDs scoped per root session to prevent cross-team collisions
+
 ### Leaderboard
 
 - **Agent rankings** — sortable by tokens, cost, duration, or tool count
@@ -172,12 +201,16 @@ Hook events ──────→ │                 │
    push-based)      │  Manager        │──→ Broadcaster ──→ WebSocket ──→ Client
                     │                 │
 JSONL watching ───→ │  (merged state) │
-  (byte-offset,     └─────────────────┘
-   pull-based)
+  (Claude, Codex,   │                 │
+   pi)              └─────────────────┘
+                            ↑
+SQLite polling ────────────┘
+  (OpenCode)
 ```
 
 Hook events provide **lifecycle accuracy** (exact session start/end, tool success/failure).
-JSONL parsing provides **rich data** (token counts, costs, full response text).
+File watching provides **rich data** (token counts, costs, full response text).
+Tool names are normalized across CLIs to a canonical set (e.g., `shell_command` → `Bash`, `read_file` → `Read`).
 
 ## Architecture
 
@@ -194,8 +227,12 @@ agent-move/
 │   ├── server/             # Fastify backend
 │   │   └── src/
 │   │       ├── hooks/          hook event manager, hook installer
-│   │       ├── watcher/        chokidar file watcher, JSONL parser
-│   │       ├── state/          agent state machine, anomaly detector, tool chains
+│   │       ├── watcher/
+│   │       │   ├── claude/     JSONL file watcher (byte-offset delta reads)
+│   │       │   ├── opencode/   SQLite WAL polling watcher
+│   │       │   ├── codex/      Codex JSONL watcher (recursive YYYY/MM/DD scan)
+│   │       │   └── pi/         pi agent JSONL watcher
+│   │       ├── state/          agent state machine, anomaly detector, tool chains, task graph
 │   │       ├── ws/             WebSocket broadcaster
 │   │       └── routes/         REST API
 │   └── client/             # Pixi.js frontend
@@ -242,14 +279,14 @@ The WebSocket sends a `full_state` snapshot on connect, then incremental events:
 
 | Problem | Solution |
 |---------|----------|
-| Port already in use | `npx agent-move@latest --port 4444` |
-| Hooks not working | `npx agent-move@latest hooks status` to check, then `hooks install` to fix |
-| No agents showing up | Make sure Claude Code is running — agents appear when sessions are active |
+| Port already in use | `npx @foothill/agent-move@latest --port 4444` |
+| Hooks not working | `npx @foothill/agent-move@latest hooks status` to check, then `hooks install` to fix |
+| No agents showing up | Make sure a supported CLI is running — agents appear when sessions are active |
 | Build artifacts missing (from source) | Run `npm run build` |
 | Permission denied on port | Use a port above 1024: `--port 3333` |
 | Browser didn't open | Visit `http://localhost:3333` manually, or check `--no-open` flag |
 
-Need more help? [Open an issue](https://github.com/AbdullahSAhmad/agent-move/issues)
+Need more help? [Open an issue](https://github.com/FoothillSolutions/agent-move/issues)
 
 ## Tech Stack
 

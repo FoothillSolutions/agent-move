@@ -2,27 +2,31 @@ import { readdir, stat } from 'fs/promises';
 import { join } from 'path';
 import { config } from '../config.js';
 
+/**
+ * Scans a directory of project subdirectories for recently active JSONL files.
+ * Used by both Claude and pi watchers — each passes its own root directory.
+ *
+ * Directory structure: {rootDir}/{project-dir}/*.jsonl
+ */
 export class SessionScanner {
-  constructor(private claudeHome: string) {}
+  constructor(private rootDir: string) {}
 
-  /** Find all recently active JSONL session files */
+  /** Find the most recently modified JSONL per project subdirectory */
   async scan(): Promise<string[]> {
     const results: string[] = [];
-    const projectsDir = join(this.claudeHome, 'projects');
 
     try {
-      const projects = await readdir(projectsDir);
+      const projects = await readdir(this.rootDir);
       const now = Date.now();
 
       for (const project of projects) {
-        const projectDir = join(projectsDir, project);
+        const projectDir = join(this.rootDir, project);
         try {
           const projectStat = await stat(projectDir);
           if (!projectStat.isDirectory()) continue;
 
           const files = await readdir(projectDir);
 
-          // Find the most recently modified main session (top-level JSONL)
           let newestFile: string | null = null;
           let newestMtime = 0;
 
@@ -32,7 +36,6 @@ export class SessionScanner {
             try {
               const fileStat = await stat(filePath);
               if (now - fileStat.mtimeMs < config.activeThresholdMs) {
-                // Only keep the most recent main session per project
                 if (fileStat.mtimeMs > newestMtime) {
                   newestMtime = fileStat.mtimeMs;
                   newestFile = filePath;
@@ -51,7 +54,7 @@ export class SessionScanner {
         }
       }
     } catch {
-      console.log('No projects directory found — will wait for new sessions');
+      // Root dir doesn't exist — will be created when sessions start
     }
 
     return results;

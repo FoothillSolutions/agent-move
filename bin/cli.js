@@ -41,11 +41,11 @@ function status(icon, label, detail) {
 function troubleshooting() {
   console.log();
   console.log(`${c.dim}  ── Troubleshooting ──────────────────────────────────────${c.reset}`);
-  console.log(`${c.dim}  Port in use?        ${c.reset}npx agent-move --port 4444`);
-  console.log(`${c.dim}  Hooks not working?  ${c.reset}npx agent-move hooks status`);
-  console.log(`${c.dim}  Reinstall hooks:    ${c.reset}npx agent-move hooks install`);
-  console.log(`${c.dim}  Remove hooks:       ${c.reset}npx agent-move hooks uninstall`);
-  console.log(`${c.dim}  Report issues:      ${c.reset}https://github.com/AbdullahSAhmad/agent-move/issues`);
+  console.log(`${c.dim}  Port in use?        ${c.reset}npx @foothill/agent-move --port 4444`);
+  console.log(`${c.dim}  Hooks not working?  ${c.reset}npx @foothill/agent-move hooks status`);
+  console.log(`${c.dim}  Reinstall hooks:    ${c.reset}npx @foothill/agent-move hooks install`);
+  console.log(`${c.dim}  Remove hooks:       ${c.reset}npx @foothill/agent-move hooks uninstall`);
+  console.log(`${c.dim}  Report issues:      ${c.reset}https://github.com/FoothillSolutions/agent-move/issues`);
   console.log();
 }
 
@@ -53,11 +53,11 @@ function troubleshooting() {
 if (args.includes('--help') || args.includes('-h')) {
   logo();
   console.log(`${c.bold}  Usage:${c.reset}`);
-  console.log(`    ${c.cyan}npx agent-move${c.reset}                     Start the visualization server`);
-  console.log(`    ${c.cyan}npx agent-move --port 4444${c.reset}         Use a custom port`);
-  console.log(`    ${c.cyan}npx agent-move hooks install${c.reset}       Install Claude Code hooks`);
-  console.log(`    ${c.cyan}npx agent-move hooks uninstall${c.reset}     Remove Claude Code hooks`);
-  console.log(`    ${c.cyan}npx agent-move hooks status${c.reset}        Check hooks installation`);
+  console.log(`    ${c.cyan}npx @foothill/agent-move${c.reset}                     Start the visualization server`);
+  console.log(`    ${c.cyan}npx @foothill/agent-move --port 4444${c.reset}         Use a custom port`);
+  console.log(`    ${c.cyan}npx @foothill/agent-move hooks install${c.reset}       Install Claude Code hooks`);
+  console.log(`    ${c.cyan}npx @foothill/agent-move hooks uninstall${c.reset}     Remove Claude Code hooks`);
+  console.log(`    ${c.cyan}npx @foothill/agent-move hooks status${c.reset}        Check hooks installation`);
   console.log();
   console.log(`${c.bold}  Options:${c.reset}`);
   console.log(`    ${c.dim}--port <n>${c.reset}    Server port (default: 3333)`);
@@ -83,7 +83,7 @@ if (args[0] === 'hooks') {
       status(`${c.green}+${c.reset}`, 'Settings updated', `(${result.settingsPath})`);
       console.log();
       console.log(`${c.dim}  Hooks will send events to http://localhost:${port}/hook${c.reset}`);
-      console.log(`${c.dim}  Start the server with: ${c.reset}npx agent-move`);
+      console.log(`${c.dim}  Start the server with: ${c.reset}npx @foothill/agent-move`);
       console.log();
     } else if (sub === 'uninstall') {
       const result = uninstallHooks();
@@ -98,7 +98,7 @@ if (args[0] === 'hooks') {
         status(s.scriptExists ? `${c.green}*${c.reset}` : `${c.red}!${c.reset}`, 'Hook script', s.scriptExists ? 'exists' : 'MISSING — run `agent-move hooks install`');
       } else {
         status(`${c.dim}-${c.reset}`, 'Hooks not installed', '');
-        console.log(`${c.dim}  Run ${c.reset}npx agent-move hooks install${c.dim} to enable real-time events.${c.reset}`);
+        console.log(`${c.dim}  Run ${c.reset}npx @foothill/agent-move hooks install${c.dim} to enable real-time events.${c.reset}`);
       }
       console.log();
     } else {
@@ -150,7 +150,7 @@ if (args[0] === 'hooks') {
       }
     } catch (err) {
       status(`${c.yellow}!${c.reset}`, 'Hooks', `skipped — ${err?.message ?? 'unknown error'}`);
-      console.log(`${c.dim}    You can install manually: npx agent-move hooks install${c.reset}`);
+      console.log(`${c.dim}    You can install manually: npx @foothill/agent-move hooks install${c.reset}`);
     }
 
     // ── Step 2: Start server ────────────────────────────────────────────────
@@ -210,10 +210,10 @@ if (args[0] === 'hooks') {
 
     if (msg.includes('EADDRINUSE')) {
       console.error(`  ${c.red}!${c.reset}  Port ${preferredPort} is already in use.`);
-      console.error(`${c.dim}    Try: ${c.reset}npx agent-move --port ${preferredPort + 1}`);
+      console.error(`${c.dim}    Try: ${c.reset}npx @foothill/agent-move --port ${preferredPort + 1}`);
     } else if (msg.includes('EACCES')) {
       console.error(`  ${c.red}!${c.reset}  Permission denied on port ${preferredPort}.`);
-      console.error(`${c.dim}    Try a port above 1024: ${c.reset}npx agent-move --port 3333`);
+      console.error(`${c.dim}    Try a port above 1024: ${c.reset}npx @foothill/agent-move --port 3333`);
     } else if (msg.includes('Cannot find module')) {
       console.error(`  ${c.red}!${c.reset}  Build artifacts missing.`);
       console.error(`${c.dim}    Run: ${c.reset}npm run build`);
@@ -222,7 +222,7 @@ if (args[0] === 'hooks') {
     }
 
     console.error();
-    console.error(`${c.dim}  Need help? https://github.com/AbdullahSAhmad/agent-move/issues${c.reset}`);
+    console.error(`${c.dim}  Need help? https://github.com/FoothillSolutions/agent-move/issues${c.reset}`);
     console.error();
     process.exit(1);
   });

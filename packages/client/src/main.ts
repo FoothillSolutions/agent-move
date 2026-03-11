@@ -39,6 +39,7 @@ import { RelationshipGraph } from './ui/relationship-graph.js';
 import { AgentHoverBar } from './ui/agent-hover-bar.js';
 import { SessionHistoryPanel } from './ui/session-history-panel.js';
 import { SessionComparisonPanel } from './ui/session-comparison-panel.js';
+import { SettingsPanel } from './ui/settings-panel.js';
 
 async function main() {
   const appEl = document.getElementById('app')!;
@@ -147,6 +148,10 @@ async function main() {
   sessionHistoryPanel.setCompareHandler((idA, idB) => {
     sessionComparisonPanel.open(idA, idB);
   });
+
+  // ── Settings Panel (in right panel) ──
+  const settingsPanel = new SettingsPanel(rightPanelContent);
+  settingsPanel.setSoundManager(sound);
 
   // ── Permission Panel (floating) ──
   const permissionPanel = new PermissionPanel(store);
@@ -271,6 +276,7 @@ async function main() {
     waterfall:   { show: () => waterfallPanel.show(), hide: () => waterfallPanel.hide(), title: 'Waterfall' },
     graph:       { show: () => relationshipGraph.show(), hide: () => relationshipGraph.hide(), title: 'Agent Graph' },
     sessions:    { show: () => sessionHistoryPanel.show(), hide: () => sessionHistoryPanel.hide(), title: 'Sessions' },
+    settings:    { show: () => settingsPanel.show(), hide: () => settingsPanel.hide(), title: 'Settings' },
   };
 
   function switchRightPanel(tab: NavTab): void {
@@ -366,6 +372,7 @@ async function main() {
       case 'toggle-waterfall':   toggleTab('waterfall'); break;
       case 'toggle-graph':       toggleTab('graph'); break;
       case 'toggle-sessions':   toggleTab('sessions'); break;
+      case 'toggle-settings':    toggleTab('settings'); break;
       case 'timeline-live':      break;
     }
   }
@@ -402,6 +409,7 @@ async function main() {
     sound.init();
     sound.muted = !sound.muted;
     updateMuteIcon();
+    settingsPanel.updateSetting('muted', sound.muted);
   });
 
   volumeSlider.addEventListener('input', () => {
@@ -411,6 +419,43 @@ async function main() {
       sound.muted = false;
     }
     updateMuteIcon();
+    settingsPanel.updateSetting('masterVolume', sound.volume);
+    if (!sound.muted) settingsPanel.updateSetting('muted', false);
+  });
+
+  // ── Settings Integration ──
+  // Apply saved settings on startup
+  const savedSettings = settingsPanel.getSettings();
+  sound.volume = savedSettings.masterVolume;
+  sound.muted = savedSettings.muted;
+  volumeSlider.value = String(Math.round(savedSettings.masterVolume * 100));
+  updateMuteIcon();
+  sound.setEnabledEvents(savedSettings.soundEvents);
+  sound.setVoices(savedSettings.soundVoices);
+  notifications.enabled = savedSettings.browserNotifications;
+  analytics.setCostThreshold(savedSettings.costThreshold);
+  if (savedSettings.showTrails) trails.toggle();
+  heatmapVisible = savedSettings.showHeatmap;
+  if (!heatmapVisible) {
+    const el = getHeatmapEl();
+    if (el) el.style.display = 'none';
+  }
+  agentManager.setShowNames(savedSettings.showAgentNames);
+
+  // React to settings changes (from settings panel UI)
+  settingsPanel.setChangeHandler((s) => {
+    sound.volume = s.masterVolume;
+    sound.muted = s.muted;
+    sound.setEnabledEvents(s.soundEvents);
+    sound.setVoices(s.soundVoices);
+    volumeSlider.value = String(Math.round(s.masterVolume * 100));
+    updateMuteIcon();
+    notifications.enabled = s.browserNotifications;
+    analytics.setCostThreshold(s.costThreshold);
+    if (s.showTrails !== trails.enabled) trails.toggle();
+    heatmapVisible = s.showHeatmap;
+    { const el = getHeatmapEl(); if (el) el.style.display = heatmapVisible ? 'block' : 'none'; }
+    agentManager.setShowNames(s.showAgentNames);
   });
 
   // Notification button
@@ -457,6 +502,7 @@ async function main() {
     'r': 'toggle-graph',
     's': 'toggle-sessions',
     '[': 'toggle-sidebar',
+    'S': 'toggle-settings',
   };
 
   document.addEventListener('keydown', (e) => {

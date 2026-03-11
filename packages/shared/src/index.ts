@@ -1,6 +1,6 @@
 // Types
 export type { JsonlMessage, AssistantMessage, ContentBlock, TextBlock, ThinkingBlock, ToolUseBlock, ToolResultBlock, TokenUsage } from './types/jsonl.js';
-export type { AgentState, AgentRole, AgentPhase, AgentEvent, ActivityEntry } from './types/agent.js';
+export type { AgentState, AgentRole, AgentPhase, AgentType, AgentEvent, ActivityEntry } from './types/agent.js';
 export type { ZoneId, ZoneConfig } from './types/zone.js';
 export type { ServerMessage, ClientMessage, PingMessage, FullStateMessage, AgentSpawnMessage, AgentUpdateMessage, AgentIdleMessage, AgentShutdownMessage, AgentHistoryMessage, RequestHistoryMessage, TimelineEvent, TimelineSnapshotMessage, AnomalyAlertMessage, ToolChainSnapshotMessage, TaskGraphSnapshotMessage, RequestToolChainMessage, RequestTaskGraphMessage, PermissionRequestMessage, PermissionResolvedMessage, SessionPhaseMessage, HooksStatusMessage, PermissionApproveMessage, PermissionDenyMessage, PermissionApproveAlwaysMessage, TaskCompletedNotification } from './types/websocket.js';
 export type { HookEventName, HookEvent, PermissionDecision, PermissionResponse, PendingPermission } from './types/hooks.js';

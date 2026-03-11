@@ -1,7 +1,7 @@
 import type { AgentState, ZoneId } from '@agent-move/shared';
-import { AGENT_PALETTES, ZONE_MAP, ZONES, getFunnyName, getProjectColorIndex } from '@agent-move/shared';
+import { AGENT_PALETTES, ZONE_MAP, ZONES, getFunnyName, getProjectColorIndex, getContextWindow } from '@agent-move/shared';
 import type { StateStore, ConnectionStatus } from '../connection/state-store.js';
-import { escapeHtml, escapeAttr, truncate, formatTokenPair, hexToCss } from '../utils/formatting.js';
+import { escapeHtml, escapeAttr, truncate, formatTokenPair, hexToCss, getCliBadge } from '../utils/formatting.js';
 
 type FilterMode = 'all' | 'active' | 'idle' | 'done' | ZoneId | `project:${string}`;
 
@@ -492,6 +492,7 @@ export class Overlay {
       font-size: 9px;
       margin-left: 4px;
     ">${escapeHtml(agent.projectName)}</span>` : '';
+    const cliBadge = getCliBadge(agent.agentType);
 
     // Status dot instead of opacity
     const statusClass = agent.isDone ? 'done' : agent.isIdle ? 'idle' : 'active';
@@ -503,7 +504,7 @@ export class Overlay {
       <div class="card-top-row">
         <div class="name">
           <span class="agent-status-dot ${statusClass}"></span>
-          ${isChild ? '<span class="child-connector">&#8627;</span>' : ''}${escapeHtml(name)}${this.roleBadge(agent.role)}${projectBadge}${doneBadge}${subBadge}
+          ${isChild ? '<span class="child-connector">&#8627;</span>' : ''}${escapeHtml(name)}${cliBadge}${this.roleBadge(agent.role)}${projectBadge}${doneBadge}${subBadge}
         </div>
         <div class="card-actions">
           <div class="agent-metrics">
@@ -516,10 +517,12 @@ export class Overlay {
       ${agent.taskDescription ? `<div class="task-desc" title="${escapeAttr(agent.taskDescription)}">${escapeHtml(truncate(agent.taskDescription, 48))}</div>` : ''}
       <div class="zone">${zone?.icon ?? ''} ${zoneName} · ${toolText}</div>
       <div class="card-tokens">${agent.contextTokens > 0 ? (() => {
-        const pct = Math.round(agent.contextTokens / 200_000 * 100);
+        const ctxWindow = getContextWindow(agent.model);
+        const pct = Math.round(agent.contextTokens / ctxWindow * 100);
         const color = pct >= 90 ? '#ef4444' : pct >= 75 ? '#f97316' : pct >= 50 ? '#eab308' : '#22c55e';
+        const newTok = agent.contextTokens - agent.contextCacheTokens;
         const fmtK = (n: number) => n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`;
-        return `<span class="detail-ctx-bar" title="Context window: ${pct}% full&#10;${agent.contextTokens.toLocaleString()} / 200,000 tokens"><span class="detail-ctx-breakdown">${fmtK(agent.contextTokens)} tokens</span><span class="detail-ctx-track"><span class="detail-ctx-fill" style="width:${pct}%;background:${color}"></span></span><span class="detail-ctx-label" style="color:${color}">${pct}%</span></span>`;
+        return `<span class="detail-ctx-bar" title="Context window: ${pct}% full&#10;${newTok.toLocaleString()} new + ${agent.contextCacheTokens.toLocaleString()} cached = ${agent.contextTokens.toLocaleString()} / ${ctxWindow.toLocaleString()}"><span class="detail-ctx-breakdown">${fmtK(newTok)} new · ${fmtK(agent.contextCacheTokens)} cached</span><span class="detail-ctx-track"><span class="detail-ctx-fill" style="width:${pct}%;background:${color}"></span></span><span class="detail-ctx-label" style="color:${color}">${pct}%</span></span>`;
       })() : `<span>${tokens}</span>`}</div>
     </div>`;
   }

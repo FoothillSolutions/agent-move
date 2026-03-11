@@ -1,129 +1,131 @@
 /**
- * Color palette and book-row constants for the pixel-art office furniture module.
+ * Gather.town-inspired color palette for pixel-art office furniture.
+ * Colors extracted from Gather.town screenshots for authentic look.
  */
 
 export const C = {
-  // Wood tones
-  darkWood: 0x4a2e14,
-  medWood: 0x6b4226,
-  wood: 0x7a5030,
-  lightWood: 0x9a7048,
-  paleWood: 0xb8884b,
+  // ── Desk / Work Surface (WHITE, not wood — Gather.town signature) ─────
+  deskTop: 0xe8e4e0,
+  deskEdge: 0xd0ccc8,
+  deskShadow: 0xb8b4b0,
+  deskHighlight: 0xf4f2f0,
 
-  // Floor
-  woodFloor: 0x9a7040,
-  woodFloorAlt: 0xa07848,
-  woodFloorDark: 0x806030,
-  plankLine: 0x6a5028,
+  // ── Wood tones (for tables, bookshelves, counters) ────────────────────
+  darkWood: 0x7a5030,
+  medWood: 0x9a6838,
+  wood: 0xb88848,
+  lightWood: 0xd0a858,
+  paleWood: 0xe8c878,
 
-  tileBase: 0xd0c4b4,
-  tileAlt: 0xc4b8a8,
-  tileGrid: 0xb0a494,
-  tileDiamond: 0xbcb0a0,
+  // ── Screen / tech ─────────────────────────────────────────────────────
+  screenFrame: 0x222234,
+  screenBody: 0x2e3040,
+  screenBlue: 0x4488ee,
+  screenBlueDark: 0x336699,
+  screenGlow: 0x88ccff,
+  screenDark: 0x334455,
+  screenGreen: 0x22cc66,
+  screenGreenGlow: 0x44ee88,
+  led: 0x44ff66,
+  ledOff: 0x1a3322,
+  ledRed: 0xff4444,
+  ledBlue: 0x44aaff,
+  ledYellow: 0xffcc22,
 
-  carpet: 0x4878a0,
-  carpetAlt: 0x407090,
-  carpetDot: 0x5888b0,
-  carpetEdge: 0x385878,
+  // ── Books ─────────────────────────────────────────────────────────────
+  bookRed: 0xdd3333,
+  bookDarkRed: 0xaa2222,
+  bookGreen: 0x44aa44,
+  bookDarkGreen: 0x338833,
+  bookBlue: 0x3355cc,
+  bookNavy: 0x223388,
+  bookYellow: 0xddbb22,
+  bookPurple: 0x9944cc,
+  bookOrange: 0xee7722,
+  bookCyan: 0x22aabb,
+  bookBrown: 0x886644,
+  bookPink: 0xdd5588,
+  bookWhite: 0xe8e8e8,
+  bookTan: 0xc8aa77,
 
-  carpetWarm: 0xa06848,
-  carpetWarmAlt: 0x8a5838,
-  carpetWarmDot: 0xb07858,
+  // ── Office Chairs (very dark charcoal — Gather.town style) ────────────
+  chairSeat: 0x3a3a48,
+  chairBack: 0x2a2a38,
+  chairArm: 0x4a4a58,
+  chairBase: 0x555566,
+  chairWheel: 0x222230,
+  chairHighlight: 0x5a5a68,
 
-  darkFloor: 0x282640,
-  darkFloorAlt: 0x302e50,
-  darkFloorLine: 0x222038,
+  // ── Sofa (warm orange/tan — Gather.town lounge) ───────────────────────
+  sofaBody: 0xd88848,
+  sofaDark: 0xb87038,
+  sofaLight: 0xf0a868,
+  sofaHighlight: 0xf8c888,
+  sofaArm: 0xc07840,
 
-  greenFloor: 0x3a6a3a,
-  greenFloorAlt: 0x4a7a4a,
-  greenFloorDot: 0x5a8a5a,
+  // ── Metal / Tech furniture ────────────────────────────────────────────
+  metalBright: 0xd0d0e0,
+  metalLight: 0xb0b0c4,
+  metalMid: 0x888898,
+  metalDark: 0x555568,
+  metalFrame: 0x44445a,
+  metalShine: 0xe8e8f0,
 
-  // Screen / tech
-  screenFrame: 0x2a2a38,
-  screenBody: 0x333344,
-  screenBlue: 0x6699cc,
-  screenGlow: 0x88bbdd,
-  screenDark: 0x445566,
-  screenGreen: 0x33aa55,
-  screenGreenGlow: 0x55cc77,
-  led: 0x44dd44,
-  ledOff: 0x224422,
-  ledRed: 0xdd4444,
-  ledBlue: 0x4488dd,
+  // ── Bookshelf (grey-blue frame — Gather.town style) ───────────────────
+  shelfFrame: 0x7888a0,
+  shelfBack: 0x8898b0,
+  shelfEdge: 0x6878a0,
+  shelfHighlight: 0x98a8c0,
 
-  // Books
-  bookRed: 0xc04040,
-  bookDarkRed: 0x903030,
-  bookGreen: 0x40a050,
-  bookDarkGreen: 0x307040,
-  bookBlue: 0x4060c0,
-  bookNavy: 0x304080,
-  bookYellow: 0xc0a030,
-  bookPurple: 0x8050b0,
-  bookOrange: 0xd08030,
-  bookCyan: 0x30a0b0,
-  bookBrown: 0x806040,
-  bookPink: 0xc06080,
-  bookWhite: 0xc8c8c8,
-  bookTan: 0xb0a080,
-
-  // Furniture
-  chairSeat: 0x9a8060,
-  chairBack: 0x887050,
-  chairArm: 0x786040,
-
-  metalBright: 0xbbbbcc,
-  metalLight: 0x999aaa,
-  metalMid: 0x777788,
-  metalDark: 0x555566,
-  metalFrame: 0x444455,
-
-  // Nature
+  // ── Nature / Plants ───────────────────────────────────────────────────
   leafDark: 0x2a7a2a,
-  leaf: 0x3a9a3a,
-  leafLight: 0x50b050,
-  leafBright: 0x66cc66,
-  potBase: 0x8b5a3a,
-  potDark: 0x6b4a2a,
-  potRim: 0x9a6a4a,
-  soil: 0x4a3a2a,
+  leaf: 0x3eb03e,
+  leafLight: 0x5acc5a,
+  leafBright: 0x76ee76,
+  potBase: 0xb06840,
+  potDark: 0x8a4e2a,
+  potRim: 0xcc8850,
+  potHighlight: 0xe0a060,
+  soil: 0x5a4230,
 
-  // Common
-  white: 0xeeeeee,
-  offWhite: 0xd4d4d4,
-  paper: 0xe8e0d0,
-  cream: 0xf0e8d8,
-  black: 0x111118,
-  red: 0xdd4444,
-  green: 0x44bb44,
-  blue: 0x4488dd,
-  yellow: 0xddcc44,
+  // ── Common ────────────────────────────────────────────────────────────
+  white: 0xf4f4f4,
+  offWhite: 0xe0ddd8,
+  paper: 0xf0e8d4,
+  cream: 0xfcf4e4,
+  black: 0x141420,
+  red: 0xee3333,
+  green: 0x33cc44,
+  blue: 0x3388ee,
+  yellow: 0xeecc33,
 
-  // Special
-  vendingBody: 0x445566,
-  vendingGlass: 0x88aabb,
-  fridgeBody: 0xaab4c0,
-  fridgeLight: 0xc4ccd4,
-  fridgeDark: 0x889098,
-  couchFrame: 0x6b4a38,
-  couchSeat: 0x8b6050,
-  couchCushion: 0xa07060,
-  couchHighlight: 0xb88070,
-  portalDeep: 0x442288,
-  portalMid: 0x6633aa,
-  portalLight: 0x9955dd,
-  portalGlow: 0xbb77ff,
+  // ── Special furniture ─────────────────────────────────────────────────
+  vendingBody: 0x3a5a7a,
+  vendingGlass: 0x88bbcc,
+  vendingLight: 0xaaddee,
+  fridgeBody: 0xc8d4da,
+  fridgeLight: 0xe0eaf0,
+  fridgeDark: 0x8898a4,
+  fridgeHandle: 0xa0aab8,
+  couchFrame: 0x7a5038,
 
-  // Whiteboard
-  whiteboardFrame: 0xbbbbcc,
-  whiteboardSurface: 0xf4f4f4,
+  // ── Portal ────────────────────────────────────────────────────────────
+  portalDeep: 0x5511aa,
+  portalMid: 0x7733cc,
+  portalLight: 0xaa55ff,
+  portalGlow: 0xdd99ff,
 
-  // Sticky notes
-  stickyYellow: 0xf0e060,
-  stickyPink: 0xf090a0,
-  stickyGreen: 0x80d080,
-  stickyBlue: 0x80b0e0,
-  stickyOrange: 0xf0a050,
+  // ── Whiteboard ────────────────────────────────────────────────────────
+  whiteboardFrame: 0xccccdd,
+  whiteboardSurface: 0xf8f8fc,
+
+  // ── Sticky notes ──────────────────────────────────────────────────────
+  stickyYellow: 0xffee44,
+  stickyPink: 0xff88aa,
+  stickyGreen: 0x88ee88,
+  stickyBlue: 0x88bbff,
+  stickyOrange: 0xffaa44,
+  stickyPurple: 0xcc88ff,
 } as const;
 
 export const BOOK_ROWS: readonly number[][] = [

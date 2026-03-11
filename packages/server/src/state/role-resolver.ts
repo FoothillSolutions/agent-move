@@ -1,6 +1,5 @@
 import type { AgentState } from '@agent-move/shared';
-import type { ParsedActivity } from '../watcher/jsonl-parser.js';
-import type { SessionInfo } from '../watcher/claude-paths.js';
+import type { ParsedActivity, SessionInfo } from '../watcher/types.js';
 
 /**
  * Determine the role for an agent based on session info alone (unnamed agents).

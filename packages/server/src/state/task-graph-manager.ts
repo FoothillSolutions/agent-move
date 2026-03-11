@@ -25,6 +25,9 @@ export class TaskGraphManager {
     if (toolName === 'TaskUpdate') {
       return this.handleUpdate(agentId, agentName, toolInput, projectName, root);
     }
+    if (toolName === 'TodoWrite' || toolName === 'update_plan') {
+      return this.handlePlanUpdate(agentId, agentName, toolInput, projectName, root);
+    }
     return false;
   }
 
@@ -144,6 +147,99 @@ export class TaskGraphManager {
     }
 
     return changed;
+  }
+
+  /**
+   * Handle plan/todo updates from multiple formats:
+   * - Codex update_plan: {plan: [{step: "...", status: "pending"|"in_progress"|"completed"}, ...]}
+   * - Claude Code / OpenCode TodoWrite: {todos: [{id, content, status}, ...]}
+   * Each call replaces the full plan — we sync to create/update tasks accordingly.
+   */
+  private handlePlanUpdate(agentId: string, agentName: string, toolInput: unknown, projectName: string | undefined, root: string): boolean {
+    const input = toolInput as Record<string, unknown> | undefined;
+    if (!input) return false;
+
+    // Normalize both formats into a common [{subject, status}] array
+    const steps = this.extractPlanSteps(input);
+    if (steps.length === 0) return false;
+
+    let changed = false;
+
+    // Build a map of existing tasks for this root by subject to avoid duplicates
+    const existingBySubject = new Map<string, TaskNode>();
+    for (const [key, task] of this.tasks) {
+      if (key.startsWith(root + '::')) {
+        existingBySubject.set(task.subject, task);
+      }
+    }
+
+    for (const { subject, status } of steps) {
+      const existing = existingBySubject.get(subject);
+
+      if (existing) {
+        // Update status if changed
+        if (existing.status !== status) {
+          existing.status = status;
+          changed = true;
+        }
+      } else {
+        // Create new task
+        const count = (this.counters.get(root) ?? 0) + 1;
+        this.counters.set(root, count);
+        const shortId = String(count);
+        const key = this.scopedKey(root, shortId);
+
+        const node: TaskNode = {
+          id: shortId,
+          subject,
+          status,
+          owner: undefined,
+          agentId,
+          agentName,
+          projectName,
+          blocks: [],
+          blockedBy: [],
+          timestamp: Date.now(),
+          _rootKey: key,
+        };
+        this.tasks.set(key, node);
+        existingBySubject.set(subject, node);
+        changed = true;
+      }
+    }
+
+    return changed;
+  }
+
+  /**
+   * Extract plan steps from various tool input formats into a common shape.
+   */
+  private extractPlanSteps(input: Record<string, unknown>): Array<{ subject: string; status: TaskNode['status'] }> {
+    // Codex format: {plan: [{step, status}]}
+    const planSteps = input.plan as Array<{ step?: string; status?: string }> | undefined;
+    if (Array.isArray(planSteps) && planSteps.length > 0) {
+      return planSteps
+        .filter(s => s.step?.trim())
+        .map(s => ({ subject: s.step!.trim(), status: this.normalizePlanStatus(s.status) }));
+    }
+
+    // Claude Code / OpenCode format: {todos: [{id, content, status}]}
+    const todos = input.todos as Array<{ id?: string; content?: string; status?: string }> | undefined;
+    if (Array.isArray(todos) && todos.length > 0) {
+      return todos
+        .filter(t => t.content?.trim())
+        .map(t => ({ subject: t.content!.trim(), status: this.normalizePlanStatus(t.status) }));
+    }
+
+    return [];
+  }
+
+  private normalizePlanStatus(status: string | undefined): TaskNode['status'] {
+    if (!status) return 'pending';
+    if (status === 'in_progress' || status === 'in-progress') return 'in_progress';
+    if (status === 'completed' || status === 'done') return 'completed';
+    if (status === 'deleted' || status === 'cancelled') return 'deleted';
+    return 'pending';
   }
 
   /**

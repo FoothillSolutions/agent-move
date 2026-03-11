@@ -1,6 +1,6 @@
 import type { AgentState, ActivityEntry } from '@agent-move/shared';
 import { getZoneForTool } from '@agent-move/shared';
-import type { ParsedActivity } from '../watcher/jsonl-parser.js';
+import type { ParsedActivity } from '../watcher/types.js';
 import { getGitBranch } from '../watcher/git-info.js';
 import type { AnomalyDetector } from './anomaly-detector.js';
 import type { ToolChainTracker } from './tool-chain-tracker.js';
@@ -82,7 +82,7 @@ function processToolUseActivity(
   toolChainTracker.recordToolUse(agentId, toolName);
 
   // Task graph tracking
-  if (toolName === 'TaskCreate' || toolName === 'TaskUpdate') {
+  if (toolName === 'TaskCreate' || toolName === 'TaskUpdate' || toolName === 'TodoWrite') {
     const graphChanged = taskGraphManager.processToolUse(
       agentId,
       agent.agentName ?? agentId.slice(0, 10),
