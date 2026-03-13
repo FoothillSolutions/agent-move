@@ -25,6 +25,9 @@ export type ServerMessage =
 export interface FullStateMessage {
   type: 'full_state';
   agents: AgentState[];
+  timeline: TimelineEvent[];
+  toolchain: ToolChainData;
+  taskgraph: TaskGraphData;
   timestamp: number;
 }
 

@@ -1,17 +1,6 @@
-import type { SessionSummary, LiveSessionSummary, RecordedSession, RecordedAgent } from '@agent-move/shared';
-import { getFunnyName } from '@agent-move/shared';
-import { escapeHtml, formatDuration, formatTokens } from '../utils/formatting.js';
+import type { SessionSummary, LiveSessionSummary, RecordedSession } from '@agent-move/shared';
+import { escapeHtml, formatDuration, formatTokens, resolveAgentName, getSourceIcon } from '../utils/formatting.js';
 import type { StateStore } from '../connection/state-store.js';
-
-/** Resolve display name using the same 3-layer chain as the live view */
-function resolveAgentName(ag: RecordedAgent): string {
-  try {
-    const customs = JSON.parse(localStorage.getItem('agent-customizations') ?? '{}');
-    const custom = customs[ag.agentId];
-    if (custom?.displayName) return custom.displayName;
-  } catch { /* ignore */ }
-  return ag.agentName || getFunnyName(ag.agentId);
-}
 import {
   fetchSessions,
   fetchLiveSessions,
@@ -35,6 +24,8 @@ export class SessionHistoryPanel {
   private expandedId: string | null = null;
   private expandedSession: RecordedSession | null = null;
   private onCompare: ((idA: string, idB: string) => void) | null = null;
+  private onOpenSession: ((sessionId: string) => void) | null = null;
+  private onOpenLiveSession: ((live: LiveSessionSummary) => void) | null = null;
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private shutdownRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   private store: StateStore | null = null;
@@ -62,6 +53,14 @@ export class SessionHistoryPanel {
 
   setCompareHandler(handler: (idA: string, idB: string) => void): void {
     this.onCompare = handler;
+  }
+
+  setOpenSessionHandler(handler: (sessionId: string) => void): void {
+    this.onOpenSession = handler;
+  }
+
+  setOpenLiveSessionHandler(handler: (live: LiveSessionSummary) => void): void {
+    this.onOpenLiveSession = handler;
   }
 
   show(): void {
@@ -176,11 +175,27 @@ export class SessionHistoryPanel {
       });
     });
 
-    // Row click -> expand/collapse
-    this.contentEl.querySelectorAll<HTMLElement>('.sh-row-main').forEach(el => {
+    // Row click -> open detail panel (recorded sessions only — not live rows)
+    this.contentEl.querySelectorAll<HTMLElement>('.sh-row:not(.sh-row-live) .sh-row-main').forEach(el => {
       el.addEventListener('click', () => {
-        const id = el.dataset.id!;
-        this.toggleExpand(id);
+        const id = el.dataset.id;
+        if (!id) return;
+        if (this.onOpenSession) {
+          this.onOpenSession(id);
+        } else {
+          this.toggleExpand(id);
+        }
+      });
+    });
+
+    // Live session row click -> open detail panel
+    this.contentEl.querySelectorAll<HTMLElement>('.sh-row-live .sh-row-main').forEach(el => {
+      el.addEventListener('click', () => {
+        const rootId = el.dataset.rootId;
+        if (rootId && this.onOpenLiveSession) {
+          const live = this.liveSessions.find(s => s.rootSessionId === rootId);
+          if (live) this.onOpenLiveSession(live);
+        }
       });
     });
 
@@ -242,15 +257,16 @@ export class SessionHistoryPanel {
   private renderLiveSessionRow(s: LiveSessionSummary): string {
     const date = new Date(s.startedAt);
     const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-    const sourceIcon = s.source === 'opencode' ? 'OC' : 'CC';
+    const sourceIcon = getSourceIcon(s.source);
     const elapsedMs = Date.now() - s.startedAt;
 
     return `
       <div class="sh-row sh-row-live">
-        <div class="sh-row-main">
+        <div class="sh-row-main" data-root-id="${s.rootSessionId}">
           <div class="sh-row-header">
             <span class="sh-source-badge">${sourceIcon}</span>
             <span class="sh-project">${escapeHtml(s.projectName)}</span>
+            <span class="sh-expand-icon">&#9654;</span>
           </div>
           <div class="sh-row-meta">
             <span>Started ${timeStr}</span>
@@ -270,7 +286,7 @@ export class SessionHistoryPanel {
     const date = new Date(s.startedAt);
     const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-    const sourceIcon = s.source === 'opencode' ? 'OC' : 'CC';
+    const sourceIcon = getSourceIcon(s.source);
     const isRecovered = s.label === '(recovered)';
     const statusBadge = isRecovered
       ? `<span class="sh-status-badge sh-status-recovered">Recovered</span>`

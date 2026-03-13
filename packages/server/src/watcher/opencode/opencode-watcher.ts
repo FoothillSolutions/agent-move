@@ -56,12 +56,18 @@ export class OpenCodeWatcher implements AgentWatcher {
   /** row id → true — deduplicates text/token events */
   private seenIds = new Set<string>();
   /**
-   * Per-session completion timers: after step-finish, if no new step-start
-   * arrives within this window, call hookStop to idle the agent immediately.
-   * This handles /exit (session ends after step-finish, no more WAL writes).
+   * Per-session idle timers: after step-finish, if no new step-start
+   * arrives within this window, call hookStop to idle the agent.
    */
   private stepFinishTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private static readonly STEP_FINISH_IDLE_MS = 4000;
+  /**
+   * Per-session shutdown timers: after step-finish, if no new activity
+   * arrives within this longer window, call hookSessionEnd to fully shut
+   * down the agent and finalize the session. This handles /exit and closed terminals.
+   */
+  private sessionEndTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private static readonly SESSION_END_MS = 180_000;
 
   // Prepared statements (initialised after DB opens)
   private stmtAllSessions!: Database.Statement;
@@ -129,6 +135,8 @@ export class OpenCodeWatcher implements AgentWatcher {
     this.seenIds.clear();
     for (const t of this.stepFinishTimers.values()) clearTimeout(t);
     this.stepFinishTimers.clear();
+    for (const t of this.sessionEndTimers.values()) clearTimeout(t);
+    this.sessionEndTimers.clear();
   }
 
   // ── Prepared statements ────────────────────────────────────────────────────
@@ -247,9 +255,10 @@ export class OpenCodeWatcher implements AgentWatcher {
     const activity = this.parser.parseTokenUsage(data);
     if (!activity) return;
 
-    // Cancel any pending step-finish idle timer
+    // Cancel any pending timers — real activity from this session
     const prefixedId = this.prefixed(row.session_id);
     this.cancelStepFinishTimer(prefixedId);
+    this.cancelSessionEndTimer(prefixedId);
 
     const sessionInfo = this.getSessionInfo(row.session_id);
     this.stateManager.processMessage(prefixedId, activity, sessionInfo);
@@ -277,18 +286,26 @@ export class OpenCodeWatcher implements AgentWatcher {
       this.seenIds.add(row.id);
       const prefixedId = this.prefixed(row.session_id);
       if (data.type === 'step-start') {
-        // Cancel any pending completion timer — agent is still active
+        // Cancel any pending timers — agent is still active
         this.cancelStepFinishTimer(prefixedId);
+        this.cancelSessionEndTimer(prefixedId);
         this.stateManager.heartbeat(prefixedId);
       } else {
-        // step-finish: start completion timer.
-        // If no new step-start arrives within the window, idle the agent.
+        // step-finish: start idle timer (short) and session-end timer (long).
+        // Short timer idles the agent between turns; long timer fully shuts
+        // it down if the user has exited OpenCode.
         this.cancelStepFinishTimer(prefixedId);
-        const timer = setTimeout(() => {
+        this.cancelSessionEndTimer(prefixedId);
+        const idleTimer = setTimeout(() => {
           this.stepFinishTimers.delete(prefixedId);
           this.stateManager.hookStop(prefixedId);
         }, OpenCodeWatcher.STEP_FINISH_IDLE_MS);
-        this.stepFinishTimers.set(prefixedId, timer);
+        this.stepFinishTimers.set(prefixedId, idleTimer);
+        const endTimer = setTimeout(() => {
+          this.sessionEndTimers.delete(prefixedId);
+          this.stateManager.hookSessionEnd(prefixedId);
+        }, OpenCodeWatcher.SESSION_END_MS);
+        this.sessionEndTimers.set(prefixedId, endTimer);
       }
       return;
     }
@@ -306,9 +323,10 @@ export class OpenCodeWatcher implements AgentWatcher {
     const activity = this.parser.parsePart(data as any, messageData);
     if (!activity) return;
 
-    // Cancel any pending step-finish idle timer — real activity is arriving
+    // Cancel any pending timers — real activity is arriving
     const prefixedId = this.prefixed(row.session_id);
     this.cancelStepFinishTimer(prefixedId);
+    this.cancelSessionEndTimer(prefixedId);
 
     const sessionInfo = this.getSessionInfo(row.session_id);
     this.stateManager.processMessage(prefixedId, activity, sessionInfo);
@@ -321,6 +339,14 @@ export class OpenCodeWatcher implements AgentWatcher {
     if (timer) {
       clearTimeout(timer);
       this.stepFinishTimers.delete(prefixedId);
+    }
+  }
+
+  private cancelSessionEndTimer(prefixedId: string): void {
+    const timer = this.sessionEndTimers.get(prefixedId);
+    if (timer) {
+      clearTimeout(timer);
+      this.sessionEndTimers.delete(prefixedId);
     }
   }
 

@@ -39,6 +39,7 @@ import { RelationshipGraph } from './ui/relationship-graph.js';
 import { AgentHoverBar } from './ui/agent-hover-bar.js';
 import { SessionHistoryPanel } from './ui/session-history-panel.js';
 import { SessionComparisonPanel } from './ui/session-comparison-panel.js';
+import { SessionDetailPanel } from './ui/session-detail-panel.js';
 import { SettingsPanel } from './ui/settings-panel.js';
 
 async function main() {
@@ -141,12 +142,29 @@ async function main() {
   // ── Agent Relationship Graph (in right panel) ──
   const relationshipGraph = new RelationshipGraph(store, rightPanelContent);
 
-  // ── Session History (in right panel) & Comparison (full-screen modal) ──
+  // ── Session History (in right panel) & Comparison (full-screen modal) & Detail ──
   const sessionHistoryPanel = new SessionHistoryPanel(rightPanelContent, store);
   const sessionComparisonPanel = new SessionComparisonPanel();
+  const sessionDetailPanel = new SessionDetailPanel(store);
 
   sessionHistoryPanel.setCompareHandler((idA, idB) => {
     sessionComparisonPanel.open(idA, idB);
+  });
+
+  sessionHistoryPanel.setOpenSessionHandler((sessionId) => {
+    sessionDetailPanel.openRecorded(sessionId);
+  });
+
+  sessionHistoryPanel.setOpenLiveSessionHandler((live) => {
+    sessionDetailPanel.openLive(live);
+  });
+
+  // Navigate from session detail agent link to monitor detail panel
+  sessionDetailPanel.setNavigateToAgentHandler((agentId) => {
+    sessionDetailPanel.close();
+    sidebar.setActiveTab('monitor');
+    detailPanel.open(agentId);
+    enterFocusMode(agentId);
   });
 
   // ── Settings Panel (in right panel) ──
@@ -285,6 +303,9 @@ async function main() {
     // Hide previous panel
     panelMap[currentTab]?.hide();
     currentTab = tab;
+
+    // Always close session detail panel when switching tabs
+    if (sessionDetailPanel.isOpen()) sessionDetailPanel.close();
 
     if (tab === 'monitor') {
       overlayEl.style.display = '';
@@ -530,6 +551,7 @@ async function main() {
     waterfallPanel.destroy();
     activityFeed.destroy();
     sessionHistoryPanel.dispose();
+    sessionDetailPanel.dispose();
     sessionComparisonPanel.dispose();
     minimap.dispose();
     store.dispose();

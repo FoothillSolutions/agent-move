@@ -338,7 +338,12 @@ export class SessionStore {
     this.db.prepare(`
       INSERT INTO live_sessions (root_session_id, session_id, source, project_name, project_path, started_at, last_activity_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(root_session_id) DO UPDATE SET last_activity_at = excluded.last_activity_at
+      ON CONFLICT(root_session_id) DO UPDATE SET
+        session_id = excluded.session_id,
+        source = excluded.source,
+        project_name = excluded.project_name,
+        project_path = excluded.project_path,
+        last_activity_at = excluded.last_activity_at
     `).run(rootSessionId, data.sessionId, data.source, data.projectName, data.projectPath, data.startedAt, Date.now());
   }
 

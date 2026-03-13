@@ -149,3 +149,9 @@ export function normalizeToolInput(
   if ('replaceAll' in out) { out.replace_all = out.replaceAll; delete out.replaceAll; }
   return out;
 }
+
+/** Canonical tool names that write/modify files */
+export const FILE_WRITE_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit']);
+
+/** Canonical tool names that read/search files */
+export const FILE_READ_TOOLS = new Set(['Read', 'Glob', 'Grep']);

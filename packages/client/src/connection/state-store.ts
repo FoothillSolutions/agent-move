@@ -164,11 +164,24 @@ export class StateStore {
         for (const agent of msg.agents) {
           this.agents.set(agent.id, agent);
         }
+        // Reset timeline from the snapshot to prevent stale/duplicate entries
+        this._timeline = msg.timeline ?? [];
         this.emit('state:reset', this.agents);
+        // Emit bundled snapshots if present (atomic connect payload)
+        if (msg.timeline) this.emit('timeline:snapshot', msg.timeline);
+        if (msg.toolchain) this.emit('toolchain:snapshot', msg.toolchain);
+        if (msg.taskgraph) this.emit('taskgraph:snapshot', msg.taskgraph);
         break;
       }
 
       case 'agent:spawn': {
+        // Deduplicate: if agent already exists, treat as update instead
+        if (this.agents.has(msg.agent.id)) {
+          this.agents.set(msg.agent.id, msg.agent);
+          this.pushTimelineEvent('agent:update', msg.agent, msg.timestamp);
+          this.emit('agent:update', msg.agent);
+          break;
+        }
         this.agents.set(msg.agent.id, msg.agent);
         this.pushTimelineEvent('agent:spawn', msg.agent, msg.timestamp);
         this.emit('agent:spawn', msg.agent);

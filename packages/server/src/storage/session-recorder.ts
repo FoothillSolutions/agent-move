@@ -457,10 +457,13 @@ export class SessionRecorder {
 
     try {
       this.store.saveSession(recorded, timeline);
+      // Remove live session data only after successful save (atomic finalization)
       this.store.removeLiveSession(rootSessionId);
       console.log(`Session recorded: ${sessionId} (${session.projectName}, ${agents.length} agents, ${totalToolUses} tools, $${recorded.totalCost.toFixed(4)})`);
     } catch (err) {
       console.error('Failed to save session:', err);
+      // Don't remove live session data on failure — it can be recovered on next startup
+      return null;
     }
 
     this.staging.delete(rootSessionId);

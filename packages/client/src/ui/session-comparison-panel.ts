@@ -1,23 +1,9 @@
 import type { RecordedSession, RecordedTimelineEvent, RecordedAgent, SessionComparison } from '@agent-move/shared';
-import { getFunnyName } from '@agent-move/shared';
-import { escapeHtml, formatDuration, formatTokens } from '../utils/formatting.js';
-
-function resolveAgentName(ag: RecordedAgent): string {
-  try {
-    const customs = JSON.parse(localStorage.getItem('agent-customizations') ?? '{}');
-    const custom = customs[ag.agentId];
-    if (custom?.displayName) return custom.displayName;
-  } catch { /* ignore */ }
-  return ag.agentName || getFunnyName(ag.agentId);
-}
+import { FILE_WRITE_TOOLS, FILE_READ_TOOLS } from '@agent-move/shared';
+import { escapeHtml, formatDuration, formatTokens, resolveAgentName } from '../utils/formatting.js';
 import { fetchComparison } from '../connection/session-api.js';
 
 type SessionWithTimeline = RecordedSession & { timeline: RecordedTimelineEvent[] };
-
-/** File-editing tools that indicate a file was changed */
-const FILE_WRITE_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit']);
-/** File-reading tools */
-const FILE_READ_TOOLS = new Set(['Read', 'Glob', 'Grep']);
 
 interface FileInfo {
   path: string;
