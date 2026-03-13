@@ -20,6 +20,9 @@ export class SessionComparisonPanel {
   private bodyEl: HTMLElement;
   private isOpen = false;
   private comparison: SessionComparison | null = null;
+  private keydownHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && this.isOpen) this.close();
+  };
 
   constructor() {
     this.el = document.createElement('div');
@@ -42,9 +45,7 @@ export class SessionComparisonPanel {
     this.el.querySelector('.scm-backdrop')!.addEventListener('click', () => this.close());
     this.el.querySelector('.scm-close')!.addEventListener('click', () => this.close());
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.isOpen) this.close();
-    });
+    document.addEventListener('keydown', this.keydownHandler);
   }
 
   async open(idA: string, idB: string): Promise<void> {
@@ -423,6 +424,7 @@ export class SessionComparisonPanel {
   }
 
   dispose(): void {
+    document.removeEventListener('keydown', this.keydownHandler);
     this.el.remove();
   }
 }

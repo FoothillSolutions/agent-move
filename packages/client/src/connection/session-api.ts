@@ -37,7 +37,8 @@ export async function fetchTimeline(id: string): Promise<RecordedTimelineEvent[]
 }
 
 export async function fetchComparison(idA: string, idB: string): Promise<SessionComparison> {
-  const res = await fetch(`${getBaseUrl()}/api/sessions/compare?a=${idA}&b=${idB}`);
+  const params = new URLSearchParams({ a: idA, b: idB });
+  const res = await fetch(`${getBaseUrl()}/api/sessions/compare?${params}`);
   if (!res.ok) throw new Error('Comparison failed');
   return res.json();
 }

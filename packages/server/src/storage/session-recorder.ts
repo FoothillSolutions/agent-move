@@ -133,11 +133,6 @@ export class SessionRecorder {
         continue;
       }
 
-      // If no agent snapshots were saved, count tool events from timeline
-      totalToolUses = agents.length > 0
-        ? agents.reduce((n, ag) => n + ag.toolUseCount, 0)
-        : timeline.filter(e => e.kind === 'tool').length;
-
       const sessionId = randomUUID();
       // Sum per-agent costs (each agent uses its own model's pricing)
       const totalCost = agents.reduce((sum, ag) => sum + ag.cost, 0);

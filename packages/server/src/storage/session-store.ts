@@ -299,8 +299,13 @@ export class SessionStore {
 
   /** Delete a session and its timeline */
   deleteSession(id: string): boolean {
-    const result = this.db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
-    return result.changes > 0;
+    let changed = false;
+    this.db.transaction(() => {
+      this.db.prepare('DELETE FROM timeline_events WHERE session_id = ?').run(id);
+      const result = this.db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
+      changed = result.changes > 0;
+    })();
+    return changed;
   }
 
   /** Update session label */
@@ -397,10 +402,12 @@ export class SessionStore {
     }));
   }
 
-  /** Remove live session data after finalization */
+  /** Remove live session data after finalization (atomic to prevent orphans on crash) */
   removeLiveSession(rootSessionId: string): void {
-    this.db.prepare('DELETE FROM live_timeline_events WHERE root_session_id = ?').run(rootSessionId);
-    this.db.prepare('DELETE FROM live_sessions WHERE root_session_id = ?').run(rootSessionId);
+    this.db.transaction(() => {
+      this.db.prepare('DELETE FROM live_timeline_events WHERE root_session_id = ?').run(rootSessionId);
+      this.db.prepare('DELETE FROM live_sessions WHERE root_session_id = ?').run(rootSessionId);
+    })();
   }
 
   /** List currently active (in-progress) live sessions */

@@ -29,6 +29,27 @@ export function registerSessionRoutes(
     return { sessions, total, limit, offset };
   });
 
+  /** Compare two sessions (must be registered before /:id to avoid shadowing) */
+  app.get<{
+    Querystring: { a: string; b: string };
+  }>('/api/sessions/compare', async (req, reply) => {
+    const { a, b } = req.query;
+    if (!a || !b) return reply.status(400).send({ error: 'Both ?a and ?b session IDs required' });
+
+    const sessionA = store.getSession(a);
+    const sessionB = store.getSession(b);
+    if (!sessionA) return reply.status(404).send({ error: `Session ${a} not found` });
+    if (!sessionB) return reply.status(404).send({ error: `Session ${b} not found` });
+
+    const timelineA = store.getTimeline(a);
+    const timelineB = store.getTimeline(b);
+
+    return {
+      sessionA: { ...sessionA, timeline: timelineA },
+      sessionB: { ...sessionB, timeline: timelineB },
+    };
+  });
+
   /** Get a single session (without timeline) */
   app.get<{ Params: { id: string } }>('/api/sessions/:id', async (req, reply) => {
     const session = store.getSession(req.params.id);
@@ -48,27 +69,6 @@ export function registerSessionRoutes(
     const offset = req.query.offset ? parseInt(req.query.offset, 10) : 0;
     const timeline = store.getTimeline(req.params.id, { limit, offset });
     return { timeline };
-  });
-
-  /** Compare two sessions */
-  app.get<{
-    Querystring: { a: string; b: string };
-  }>('/api/sessions/compare', async (req, reply) => {
-    const { a, b } = req.query;
-    if (!a || !b) return reply.status(400).send({ error: 'Both ?a and ?b session IDs required' });
-
-    const sessionA = store.getSession(a);
-    const sessionB = store.getSession(b);
-    if (!sessionA) return reply.status(404).send({ error: `Session ${a} not found` });
-    if (!sessionB) return reply.status(404).send({ error: `Session ${b} not found` });
-
-    const timelineA = store.getTimeline(a);
-    const timelineB = store.getTimeline(b);
-
-    return {
-      sessionA: { ...sessionA, timeline: timelineA },
-      sessionB: { ...sessionB, timeline: timelineB },
-    };
   });
 
   /** Update session label */
