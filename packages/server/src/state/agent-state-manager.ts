@@ -684,7 +684,10 @@ export class AgentStateManager extends EventEmitter {
   hookSessionEnd(sessionId: string): void {
     const canonicalId = this.resolveAgentId(sessionId);
     if (this.agents.has(canonicalId)) {
+      console.log(`[hookSessionEnd] Shutting down agent: session=${sessionId.slice(0, 12)}… canonical=${canonicalId.slice(0, 12)}…`);
       this.shutdown(canonicalId);
+    } else {
+      console.log(`[hookSessionEnd] Agent not found: session=${sessionId.slice(0, 12)}… canonical=${canonicalId.slice(0, 12)}… | known agents: [${[...this.agents.keys()].map(k => k.slice(0, 12)).join(', ')}]`);
     }
   }
 

@@ -37,6 +37,9 @@ import { ActivityFeed } from './ui/activity-feed.js';
 import { WaterfallPanel } from './ui/waterfall-panel.js';
 import { RelationshipGraph } from './ui/relationship-graph.js';
 import { AgentHoverBar } from './ui/agent-hover-bar.js';
+import { SessionHistoryPanel } from './ui/session-history-panel.js';
+import { SessionComparisonPanel } from './ui/session-comparison-panel.js';
+import { SessionDetailPanel } from './ui/session-detail-panel.js';
 import { SettingsPanel } from './ui/settings-panel.js';
 
 async function main() {
@@ -138,6 +141,31 @@ async function main() {
 
   // ── Agent Relationship Graph (in right panel) ──
   const relationshipGraph = new RelationshipGraph(store, rightPanelContent);
+
+  // ── Session History (in right panel) & Comparison (full-screen modal) & Detail ──
+  const sessionHistoryPanel = new SessionHistoryPanel(rightPanelContent, store);
+  const sessionComparisonPanel = new SessionComparisonPanel();
+  const sessionDetailPanel = new SessionDetailPanel(store);
+
+  sessionHistoryPanel.setCompareHandler((idA, idB) => {
+    sessionComparisonPanel.open(idA, idB);
+  });
+
+  sessionHistoryPanel.setOpenSessionHandler((sessionId) => {
+    sessionDetailPanel.openRecorded(sessionId);
+  });
+
+  sessionHistoryPanel.setOpenLiveSessionHandler((live) => {
+    sessionDetailPanel.openLive(live);
+  });
+
+  // Navigate from session detail agent link to monitor detail panel
+  sessionDetailPanel.setNavigateToAgentHandler((agentId) => {
+    sessionDetailPanel.close();
+    sidebar.setActiveTab('monitor');
+    detailPanel.open(agentId);
+    enterFocusMode(agentId);
+  });
 
   // ── Settings Panel (in right panel) ──
   const settingsPanel = new SettingsPanel(rightPanelContent);
@@ -265,6 +293,7 @@ async function main() {
     activity:    { show: () => activityFeed.show(), hide: () => activityFeed.hide(), title: 'Activity Feed' },
     waterfall:   { show: () => waterfallPanel.show(), hide: () => waterfallPanel.hide(), title: 'Waterfall' },
     graph:       { show: () => relationshipGraph.show(), hide: () => relationshipGraph.hide(), title: 'Agent Graph' },
+    sessions:    { show: () => sessionHistoryPanel.show(), hide: () => sessionHistoryPanel.hide(), title: 'Sessions' },
     settings:    { show: () => settingsPanel.show(), hide: () => settingsPanel.hide(), title: 'Settings' },
   };
 
@@ -274,6 +303,9 @@ async function main() {
     // Hide previous panel
     panelMap[currentTab]?.hide();
     currentTab = tab;
+
+    // Always close session detail panel when switching tabs
+    if (sessionDetailPanel.isOpen()) sessionDetailPanel.close();
 
     if (tab === 'monitor') {
       overlayEl.style.display = '';
@@ -360,6 +392,7 @@ async function main() {
       case 'toggle-activity':    toggleTab('activity'); break;
       case 'toggle-waterfall':   toggleTab('waterfall'); break;
       case 'toggle-graph':       toggleTab('graph'); break;
+      case 'toggle-sessions':   toggleTab('sessions'); break;
       case 'toggle-settings':    toggleTab('settings'); break;
       case 'timeline-live':      break;
     }
@@ -488,8 +521,9 @@ async function main() {
     'v': 'toggle-activity',
     'w': 'toggle-waterfall',
     'r': 'toggle-graph',
+    's': 'toggle-sessions',
     '[': 'toggle-sidebar',
-    's': 'toggle-settings',
+    'S': 'toggle-settings',
   };
 
   document.addEventListener('keydown', (e) => {
@@ -516,6 +550,9 @@ async function main() {
     permissionPanel.dispose();
     waterfallPanel.destroy();
     activityFeed.destroy();
+    sessionHistoryPanel.dispose();
+    sessionDetailPanel.dispose();
+    sessionComparisonPanel.dispose();
     minimap.dispose();
     store.dispose();
   });

@@ -98,39 +98,18 @@ export class Broadcaster {
       this.clients.delete(ws);
     });
 
-    // Send full state snapshot on connect
+    // Send full state snapshot on connect (single atomic message to prevent race conditions)
     if (ws.readyState === 1) {
       try {
         const fullState: ServerMessage = {
           type: 'full_state',
           agents: this.stateManager.getAll(),
+          timeline: this.stateManager.getTimeline(),
+          toolchain: this.stateManager.getToolChainSnapshot(),
+          taskgraph: this.stateManager.getTaskGraphSnapshot(),
           timestamp: Date.now(),
         };
         ws.send(JSON.stringify(fullState));
-
-        // Send timeline snapshot for replay
-        const timeline: ServerMessage = {
-          type: 'timeline:snapshot',
-          events: this.stateManager.getTimeline(),
-          timestamp: Date.now(),
-        };
-        ws.send(JSON.stringify(timeline));
-
-        // Send tool chain snapshot
-        const toolchain: ServerMessage = {
-          type: 'toolchain:snapshot',
-          data: this.stateManager.getToolChainSnapshot(),
-          timestamp: Date.now(),
-        };
-        ws.send(JSON.stringify(toolchain));
-
-        // Send task graph snapshot
-        const taskgraph: ServerMessage = {
-          type: 'taskgraph:snapshot',
-          data: this.stateManager.getTaskGraphSnapshot(),
-          timestamp: Date.now(),
-        };
-        ws.send(JSON.stringify(taskgraph));
       } catch {
         this.clients.delete(ws);
       }

@@ -57,7 +57,8 @@ export function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
 }
 
-import type { AgentType } from '@agent-move/shared';
+import type { AgentType, RecordedAgent } from '@agent-move/shared';
+import { getFunnyName } from '@agent-move/shared';
 
 /** CLI type badge config keyed by AgentType */
 const CLI_BADGES: Record<AgentType, { label: string; color: string; title: string }> = {
@@ -82,4 +83,41 @@ export function getCliBadge(agentType: AgentType): string {
     margin-left: 4px;
     vertical-align: middle;
   ">${match.label}</span>`;
+}
+
+/** Get source icon abbreviation (CC, OC, etc.) from source/agentType string */
+export function getSourceIcon(source: string): string {
+  return CLI_BADGES[source as AgentType]?.label ?? source.toUpperCase().slice(0, 2);
+}
+
+/** Get source display label (Claude Code, OpenCode, etc.) from source/agentType string */
+export function getSourceLabel(source: string): string {
+  return CLI_BADGES[source as AgentType]?.title ?? source;
+}
+
+/** Cached agent customizations from localStorage */
+let _customizationsCache: Record<string, { displayName?: string }> | null = null;
+let _customizationsCacheTime = 0;
+const CUSTOMIZATIONS_CACHE_TTL = 2000; // 2s
+
+function getCustomizations(): Record<string, { displayName?: string }> {
+  const now = Date.now();
+  if (_customizationsCache && (now - _customizationsCacheTime) < CUSTOMIZATIONS_CACHE_TTL) {
+    return _customizationsCache;
+  }
+  try {
+    _customizationsCache = JSON.parse(localStorage.getItem('agent-customizations') ?? '{}');
+    _customizationsCacheTime = now;
+  } catch {
+    _customizationsCache = {};
+  }
+  return _customizationsCache!;
+}
+
+/** Resolve display name for a recorded agent using customizations or funny names */
+export function resolveAgentName(ag: RecordedAgent): string {
+  const customs = getCustomizations();
+  const custom = customs[ag.agentId];
+  if (custom?.displayName) return custom.displayName;
+  return ag.agentName || getFunnyName(ag.agentId);
 }

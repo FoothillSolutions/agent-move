@@ -93,9 +93,4 @@ export function promoteAgent(deps: IdentityManagerDeps, agentId: string): void {
   const spawnEvent = { type: 'agent:spawn', agent: { ...agent }, timestamp: now } satisfies AgentEvent;
   recordTimeline(spawnEvent);
   emit('agent:spawn', spawnEvent);
-
-  // Also emit current state as an update
-  const updateEvent = { type: 'agent:update', agent: { ...agent }, timestamp: now } satisfies AgentEvent;
-  recordTimeline(updateEvent);
-  emit('agent:update', updateEvent);
 }

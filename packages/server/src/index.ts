@@ -14,6 +14,8 @@ import { AgentStateManager } from './state/agent-state-manager.js';
 import { Broadcaster } from './ws/broadcaster.js';
 import { registerWsHandler } from './ws/ws-handler.js';
 import { registerApiRoutes } from './routes/api.js';
+import { registerSessionRoutes } from './routes/sessions-api.js';
+import { SessionRecorder } from './storage/session-recorder.js';
 import { HookEventManager } from './hooks/hook-event-manager.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -33,11 +35,13 @@ export async function main() {
   });
 
   const stateManager = new AgentStateManager();
+  const sessionRecorder = new SessionRecorder(stateManager);
   const hookManager = new HookEventManager(stateManager);
   const broadcaster = new Broadcaster(stateManager, hookManager);
 
   registerWsHandler(app, stateManager, broadcaster, hookManager);
   registerApiRoutes(app, stateManager);
+  registerSessionRoutes(app, sessionRecorder, stateManager);
 
   // Hook endpoint: receives Claude Code hook events via POST /hook
   app.post('/hook', {
@@ -98,6 +102,7 @@ export async function main() {
   const shutdown = async () => {
     console.log('Shutting down...');
     for (const w of watchers) w.stop();
+    sessionRecorder.dispose();
     hookManager.dispose();
     broadcaster.dispose();
     stateManager.dispose();
