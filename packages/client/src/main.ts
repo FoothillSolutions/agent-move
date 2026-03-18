@@ -18,6 +18,7 @@ import { Sidebar } from './ui/sidebar.js';
 import { ToastManager } from './ui/toast-manager.js';
 import { ShortcutsHelp } from './ui/shortcuts-help.js';
 import { SessionExport } from './ui/session-export.js';
+import { CanvasExport } from './ui/canvas-export.js';
 import { Onboarding } from './ui/onboarding.js';
 import { ZONE_MAP, AGENT_PALETTES } from '@agent-move/shared';
 
@@ -185,6 +186,9 @@ async function main() {
 
   // ── Session Export ──
   const sessionExport = new SessionExport(store);
+
+  // ── Canvas Screenshot Export ──
+  const canvasExport = new CanvasExport(pixiApp, world);
 
   // ── Onboarding ──
   const onboarding = new Onboarding();
@@ -554,6 +558,7 @@ async function main() {
     sessionDetailPanel.dispose();
     sessionComparisonPanel.dispose();
     minimap.dispose();
+    canvasExport.dispose();
     store.dispose();
   });
 
