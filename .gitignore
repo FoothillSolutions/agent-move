@@ -5,3 +5,4 @@ dist/
 .playwright-mcp/
 COMPETITIVE_ANALYSIS.md
 .claude/settings.local.json
+.strata-worktrees/

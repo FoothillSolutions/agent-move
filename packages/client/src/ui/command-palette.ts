@@ -186,6 +186,14 @@ export class CommandPalette {
 
     // New features
     this.actions.push({
+      id: 'feature:screenshot',
+      label: 'Take Screenshot',
+      description: 'Capture canvas as PNG image (Shift+E)',
+      icon: '📷',
+      category: 'feature',
+      action: () => this.onCommand('screenshot-export'),
+    });
+    this.actions.push({
       id: 'feature:trails',
       label: 'Toggle Agent Trails',
       description: 'Show movement trail dots (T)',

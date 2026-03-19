@@ -18,6 +18,7 @@ import { Sidebar } from './ui/sidebar.js';
 import { ToastManager } from './ui/toast-manager.js';
 import { ShortcutsHelp } from './ui/shortcuts-help.js';
 import { SessionExport } from './ui/session-export.js';
+import { ScreenshotExport } from './ui/screenshot-export.js';
 import { Onboarding } from './ui/onboarding.js';
 import { ZONE_MAP, AGENT_PALETTES } from '@agent-move/shared';
 
@@ -185,6 +186,9 @@ async function main() {
 
   // ── Session Export ──
   const sessionExport = new SessionExport(store);
+
+  // ── Screenshot Export ──
+  const screenshotExport = new ScreenshotExport(pixiApp.canvas as HTMLCanvasElement);
 
   // ── Onboarding ──
   const onboarding = new Onboarding();
@@ -379,6 +383,7 @@ async function main() {
         break;
       case 'exit-focus':         if (focusModeActive) exitFocusMode(); break;
       case 'session-export':     sessionExport.toggle(); break;
+      case 'screenshot-export':  screenshotExport.capture(); break;
       case 'toggle-trails':      trails.toggle(); break;
       case 'toggle-daynight':    world.dayNight.toggle(); break;
       case 'toggle-minimap':     minimap.toggle(); break;
@@ -416,6 +421,7 @@ async function main() {
   document.getElementById('zoom-in')!.addEventListener('click', () => world.camera.zoomIn());
   document.getElementById('zoom-out')!.addEventListener('click', () => world.camera.zoomOut());
   document.getElementById('zoom-reset')!.addEventListener('click', () => world.resetCamera());
+  document.getElementById('screenshot-btn')!.addEventListener('click', () => screenshotExport.capture());
 
   // Audio controls (mute button + volume slider in top bar)
   const muteBtn = document.getElementById('mute-btn')!;
@@ -524,6 +530,7 @@ async function main() {
     's': 'toggle-sessions',
     '[': 'toggle-sidebar',
     'S': 'toggle-settings',
+    'E': 'screenshot-export',
   };
 
   document.addEventListener('keydown', (e) => {
