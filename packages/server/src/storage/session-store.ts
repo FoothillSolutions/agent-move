@@ -6,15 +6,17 @@ import type {
   RecordedSession,
   RecordedAgent,
   RecordedTimelineEvent,
+  ReplayTimelineEvent,
   SessionSummary,
   LiveSessionSummary,
   ToolChainData,
+  AgentState,
 } from '@agent-move/shared';
 
 const DB_DIR = join(homedir(), '.agent-move');
 const DB_PATH = join(DB_DIR, 'sessions.db');
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 export class SessionStore {
   private db: Database.Database;
@@ -106,6 +108,17 @@ export class SessionStore {
         CREATE INDEX IF NOT EXISTS idx_live_timeline_root ON live_timeline_events(root_session_id);
       `);
 
+      // v2 → v3 migration: add agent_state_json column for replay support
+      if (currentVersion >= 2) {
+        // Check if column already exists before altering
+        const cols = this.db.pragma('table_info(timeline_events)') as Array<{ name: string }>;
+        const hasCol = cols.some(c => c.name === 'agent_state_json');
+        if (!hasCol) {
+          this.db.exec('ALTER TABLE timeline_events ADD COLUMN agent_state_json TEXT');
+          this.db.exec('ALTER TABLE live_timeline_events ADD COLUMN agent_state_json TEXT');
+        }
+      }
+
       if (currentVersion === 0) {
         this.db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(SCHEMA_VERSION);
       } else {
@@ -115,7 +128,7 @@ export class SessionStore {
   }
 
   /** Save a complete recorded session with its timeline */
-  saveSession(session: RecordedSession, timeline: RecordedTimelineEvent[]): void {
+  saveSession(session: RecordedSession, timeline: RecordedTimelineEvent[], rootSessionId?: string): void {
     const insertSession = this.db.prepare(`
       INSERT OR REPLACE INTO sessions (
         id, source, root_session_id, project_name, project_path,
@@ -132,8 +145,8 @@ export class SessionStore {
     const insertEvent = this.db.prepare(`
       INSERT INTO timeline_events (
         session_id, timestamp, agent_id, kind, zone, tool, tool_args,
-        text_content, input_tokens, output_tokens
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        text_content, input_tokens, output_tokens, agent_state_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const txn = this.db.transaction(() => {
@@ -163,7 +176,20 @@ export class SessionStore {
         JSON.stringify(session.toolChain),
       );
 
+      // If we have a rootSessionId, copy agent_state_json from live events
+      // Build a lookup: (agentId, timestamp, kind) → agent_state_json
+      const stateJsonMap = new Map<string, string>();
+      if (rootSessionId) {
+        const liveRows = this.db.prepare(
+          'SELECT agent_id, timestamp, kind, agent_state_json FROM live_timeline_events WHERE root_session_id = ? AND agent_state_json IS NOT NULL'
+        ).all(rootSessionId) as Array<{ agent_id: string; timestamp: number; kind: string; agent_state_json: string }>;
+        for (const r of liveRows) {
+          stateJsonMap.set(`${r.agent_id}:${r.timestamp}:${r.kind}`, r.agent_state_json);
+        }
+      }
+
       for (const evt of timeline) {
+        const stateJson = stateJsonMap.get(`${evt.agentId}:${evt.timestamp}:${evt.kind}`) ?? null;
         insertEvent.run(
           session.id,
           evt.timestamp,
@@ -175,6 +201,7 @@ export class SessionStore {
           evt.text ?? null,
           evt.inputTokens ?? null,
           evt.outputTokens ?? null,
+          stateJson,
         );
       }
     });
@@ -297,6 +324,53 @@ export class SessionStore {
     }));
   }
 
+  /** Get replay events (timeline events with parsed AgentState) for a session */
+  getReplayEvents(sessionId: string): ReplayTimelineEvent[] {
+    const rows = this.db.prepare(`
+      SELECT timestamp, agent_id, kind, zone, tool, tool_args, text_content,
+             input_tokens, output_tokens, agent_state_json
+      FROM timeline_events
+      WHERE session_id = ?
+      ORDER BY timestamp ASC
+    `).all(sessionId) as Array<{
+      timestamp: number; agent_id: string; kind: string;
+      zone: string | null; tool: string | null; tool_args: string | null;
+      text_content: string | null; input_tokens: number | null; output_tokens: number | null;
+      agent_state_json: string | null;
+    }>;
+
+    return rows.map(r => {
+      let agentState: AgentState | undefined;
+      if (r.agent_state_json) {
+        try {
+          agentState = JSON.parse(r.agent_state_json) as AgentState;
+        } catch {
+          // Malformed JSON — skip state for this event
+        }
+      }
+      return {
+        timestamp: r.timestamp,
+        agentId: r.agent_id,
+        kind: r.kind as RecordedTimelineEvent['kind'],
+        ...(r.zone && { zone: r.zone as RecordedTimelineEvent['zone'] }),
+        ...(r.tool && { tool: r.tool }),
+        ...(r.tool_args && { toolArgs: r.tool_args }),
+        ...(r.text_content && { text: r.text_content }),
+        ...(r.input_tokens != null && { inputTokens: r.input_tokens }),
+        ...(r.output_tokens != null && { outputTokens: r.output_tokens }),
+        ...(agentState && { agentState }),
+      };
+    });
+  }
+
+  /** Check if a session has replay data (agent_state_json) */
+  hasReplayData(sessionId: string): boolean {
+    const row = this.db.prepare(
+      'SELECT COUNT(*) as cnt FROM timeline_events WHERE session_id = ? AND agent_state_json IS NOT NULL'
+    ).get(sessionId) as { cnt: number };
+    return row.cnt > 0;
+  }
+
   /** Delete a session and its timeline */
   deleteSession(id: string): boolean {
     let changed = false;
@@ -360,10 +434,10 @@ export class SessionStore {
   }
 
   /** Append a timeline event to the live buffer */
-  appendLiveTimelineEvent(rootSessionId: string, evt: RecordedTimelineEvent): void {
+  appendLiveTimelineEvent(rootSessionId: string, evt: RecordedTimelineEvent, agentStateJson?: string | null): void {
     this.db.prepare(`
-      INSERT INTO live_timeline_events (root_session_id, timestamp, agent_id, kind, zone, tool, tool_args, text_content, input_tokens, output_tokens)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO live_timeline_events (root_session_id, timestamp, agent_id, kind, zone, tool, tool_args, text_content, input_tokens, output_tokens, agent_state_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       rootSessionId,
       evt.timestamp,
@@ -375,6 +449,7 @@ export class SessionStore {
       evt.text ?? null,
       evt.inputTokens ?? null,
       evt.outputTokens ?? null,
+      agentStateJson ?? null,
     );
   }
 

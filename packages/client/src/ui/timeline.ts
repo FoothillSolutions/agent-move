@@ -48,6 +48,13 @@ export class Timeline {
   private replayAgents = new Map<string, AgentState>();
   private onReplayState: ((agents: Map<string, AgentState>) => void) | null = null;
 
+  // Recording replay mode
+  private _isRecordingReplay = false;
+  private _replaySessionLabel = '';
+  private _exitReplayHandler: (() => void) | null = null;
+  private replayBadge: HTMLElement | null = null;
+  private exitReplayBtn: HTMLButtonElement | null = null;
+
   constructor(store: StateStore) {
     this.store = store;
 
@@ -182,6 +189,84 @@ export class Timeline {
 
   setReplayCallback(cb: (agents: Map<string, AgentState>) => void): void {
     this.onReplayState = cb;
+  }
+
+  /** Set handler for when user clicks "Exit Replay" */
+  setExitReplayHandler(handler: () => void): void {
+    this._exitReplayHandler = handler;
+  }
+
+  /** Whether the timeline is in recording replay mode */
+  get isRecordingReplay(): boolean {
+    return this._isRecordingReplay;
+  }
+
+  /** Enter recording replay mode: show REPLAY badge, exit button, auto-play from start */
+  enterRecordingReplay(sessionLabel: string): void {
+    this._isRecordingReplay = true;
+    this._replaySessionLabel = sessionLabel;
+    this.el.classList.add('recording-replay');
+
+    // Create REPLAY badge
+    const controlsEl = this.el.querySelector('.timeline-controls')!;
+    this.replayBadge = document.createElement('span');
+    this.replayBadge.className = 'timeline-replay-badge';
+    this.replayBadge.textContent = 'REPLAY';
+    controlsEl.insertBefore(this.replayBadge, controlsEl.firstChild);
+
+    // Create session label
+    const labelEl = document.createElement('span');
+    labelEl.className = 'timeline-replay-label';
+    labelEl.textContent = sessionLabel;
+    this.replayBadge.after(labelEl);
+
+    // Replace LIVE button with Exit Replay button
+    this.liveBtn.style.display = 'none';
+    this.exitReplayBtn = document.createElement('button');
+    this.exitReplayBtn.className = 'timeline-exit-btn';
+    this.exitReplayBtn.textContent = '\u2715 Exit Replay';
+    this.exitReplayBtn.title = 'Exit replay and return to live view';
+    this.exitReplayBtn.addEventListener('click', () => {
+      this._exitReplayHandler?.();
+    });
+    this.liveBtn.after(this.exitReplayBtn);
+
+    // Start playback from the beginning
+    this.isLive = false;
+    this.liveBtn.classList.remove('active');
+    this.playbackPosition = 0;
+    this.isPlaying = true;
+    this.playBtn.textContent = '\u23F8'; // pause symbol
+    this.lastFrameTime = performance.now();
+    this.startPlayback();
+    this.render();
+  }
+
+  /** Exit recording replay mode: restore live UI */
+  exitRecordingReplay(): void {
+    this._isRecordingReplay = false;
+    this._replaySessionLabel = '';
+    this.el.classList.remove('recording-replay');
+
+    // Remove replay badge and label
+    if (this.replayBadge) {
+      const labelEl = this.replayBadge.nextElementSibling;
+      if (labelEl?.classList.contains('timeline-replay-label')) {
+        labelEl.remove();
+      }
+      this.replayBadge.remove();
+      this.replayBadge = null;
+    }
+
+    // Remove exit button, restore LIVE button
+    if (this.exitReplayBtn) {
+      this.exitReplayBtn.remove();
+      this.exitReplayBtn = null;
+    }
+    this.liveBtn.style.display = '';
+
+    // Go back to live
+    this.goLive();
   }
 
   dispose(): void {
@@ -472,6 +557,8 @@ export class Timeline {
   }
 
   private goLive(): void {
+    // In recording replay mode, goLive is a no-op — must use Exit Replay
+    if (this._isRecordingReplay) return;
     this.isLive = true;
     this.isPlaying = false;
     this.playBtn.innerHTML = '&#9654;';
@@ -500,6 +587,15 @@ export class Timeline {
       this.playbackPosition = Math.min(1, this.playbackPosition + advance);
 
       if (this.playbackPosition >= 1) {
+        if (this._isRecordingReplay) {
+          // In recording replay mode: pause at end, don't go live
+          this.isPlaying = false;
+          this.playBtn.textContent = '\u25B6'; // play symbol
+          this.stopPlayback();
+          this.reconstructState();
+          this.render();
+          return;
+        }
         // Reached the end -> go live
         this.goLive();
         return;

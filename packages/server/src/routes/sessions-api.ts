@@ -57,6 +57,16 @@ export function registerSessionRoutes(
     return session;
   });
 
+  /** Get replay events for a session (with parsed AgentState for visual replay) */
+  app.get<{ Params: { id: string } }>('/api/sessions/:id/replay-events', async (req, reply) => {
+    const session = store.getSession(req.params.id);
+    if (!session) return reply.status(404).send({ error: 'Session not found' });
+
+    const events = store.getReplayEvents(req.params.id);
+    const hasReplayData = events.some(e => e.agentState !== undefined);
+    return { events, session, hasReplayData };
+  });
+
   /** Get timeline events for a session */
   app.get<{
     Params: { id: string };

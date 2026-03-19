@@ -41,6 +41,7 @@ import { SessionHistoryPanel } from './ui/session-history-panel.js';
 import { SessionComparisonPanel } from './ui/session-comparison-panel.js';
 import { SessionDetailPanel } from './ui/session-detail-panel.js';
 import { SettingsPanel } from './ui/settings-panel.js';
+import { ReplayManager } from './replay/replay-manager.js';
 
 async function main() {
   const appEl = document.getElementById('app')!;
@@ -377,7 +378,10 @@ async function main() {
         }
         updateFocusIndicator();
         break;
-      case 'exit-focus':         if (focusModeActive) exitFocusMode(); break;
+      case 'exit-focus':
+        if (replayManager.isReplaying) { replayManager.exitReplay(); }
+        else if (focusModeActive) { exitFocusMode(); }
+        break;
       case 'session-export':     sessionExport.toggle(); break;
       case 'toggle-trails':      trails.toggle(); break;
       case 'toggle-daynight':    world.dayNight.toggle(); break;
@@ -411,6 +415,25 @@ async function main() {
   // Connect WebSocket
   const ws = new WsClient(store);
   ws.connect();
+
+  // ── Replay Manager ──
+  const replayManager = new ReplayManager(store, ws, timeline);
+
+  // Wire replay from session history panel
+  sessionHistoryPanel.setReplayHandler(async (sessionId) => {
+    try {
+      await replayManager.startReplay(sessionId);
+      // Switch to monitor tab so the grid is visible
+      sidebar.setActiveTab('monitor');
+    } catch (err) {
+      console.error('Failed to start replay:', err);
+    }
+  });
+
+  // Wire exit replay handler on timeline
+  timeline.setExitReplayHandler(() => {
+    replayManager.exitReplay();
+  });
 
   // Zoom controls
   document.getElementById('zoom-in')!.addEventListener('click', () => world.camera.zoomIn());

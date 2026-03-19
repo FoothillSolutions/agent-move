@@ -26,6 +26,7 @@ export class SessionHistoryPanel {
   private onCompare: ((idA: string, idB: string) => void) | null = null;
   private onOpenSession: ((sessionId: string) => void) | null = null;
   private onOpenLiveSession: ((live: LiveSessionSummary) => void) | null = null;
+  private onReplay: ((sessionId: string) => void) | null = null;
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private shutdownRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   private store: StateStore | null = null;
@@ -61,6 +62,10 @@ export class SessionHistoryPanel {
 
   setOpenLiveSessionHandler(handler: (live: LiveSessionSummary) => void): void {
     this.onOpenLiveSession = handler;
+  }
+
+  setReplayHandler(handler: (sessionId: string) => void): void {
+    this.onReplay = handler;
   }
 
   show(): void {
@@ -199,6 +204,15 @@ export class SessionHistoryPanel {
       });
     });
 
+    // Replay handlers
+    this.contentEl.querySelectorAll<HTMLElement>('.sh-replay-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id!;
+        this.onReplay?.(id);
+      });
+    });
+
     // Label edit handlers
     this.contentEl.querySelectorAll<HTMLElement>('.sh-label-edit').forEach(btn => {
       btn.addEventListener('click', async (e) => {
@@ -329,6 +343,9 @@ export class SessionHistoryPanel {
           ${detailHtml}
         </div>
         <div class="sh-row-actions">
+          <button class="sh-replay-btn" data-id="${s.id}" title="Replay session">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
           <button class="sh-label-edit" data-id="${s.id}" data-label="${escapeHtml(s.label || '')}" title="Edit label">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
           </button>

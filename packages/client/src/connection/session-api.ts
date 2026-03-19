@@ -1,4 +1,4 @@
-import type { RecordedSession, SessionSummary, LiveSessionSummary, RecordedTimelineEvent, SessionComparison } from '@agent-move/shared';
+import type { RecordedSession, SessionSummary, LiveSessionSummary, RecordedTimelineEvent, ReplayTimelineEvent, SessionComparison } from '@agent-move/shared';
 
 /** Derive the base URL from current page location (same origin as WebSocket) */
 function getBaseUrl(): string {
@@ -53,6 +53,16 @@ export async function updateSessionLabel(id: string, label: string | null): Prom
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ label }),
   });
+}
+
+export async function fetchReplayEvents(id: string): Promise<{
+  events: ReplayTimelineEvent[];
+  session: RecordedSession;
+  hasReplayData: boolean;
+}> {
+  const res = await fetch(`${getBaseUrl()}/api/sessions/${id}/replay-events`);
+  if (!res.ok) throw new Error(`Session ${id} not found`);
+  return res.json();
 }
 
 export async function recordCurrentSession(rootSessionId?: string): Promise<string> {

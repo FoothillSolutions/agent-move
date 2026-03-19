@@ -341,3 +341,55 @@
 .tg-node-subj { font-size: 11.5px; fill: var(--text-primary); font-family: var(--font-ui); }
 .tg-node-id { font-size: 9px; fill: var(--text-muted); font-family: var(--font-ui); font-weight: 600; }
 .tg-node-info { font-size: 9px; fill: var(--text-dim); font-family: var(--font-ui); }
+
+/* ═══════════════════════════════════════════
+   RECORDING REPLAY MODE
+   ═══════════════════════════════════════════ */
+#timeline-bar.recording-replay {
+  border-top: 1px solid rgba(233, 69, 96, 0.4);
+}
+.timeline-replay-badge {
+  background: #e94560;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  animation: pulse-replay 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse-replay {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.timeline-replay-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.timeline-exit-btn {
+  background: rgba(233, 69, 96, 0.15);
+  border: 1px solid rgba(233, 69, 96, 0.4);
+  color: #e94560;
+  padding: 0 8px;
+  height: var(--btn-height-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.timeline-exit-btn:hover {
+  background: rgba(233, 69, 96, 0.3);
+  border-color: #e94560;
+}

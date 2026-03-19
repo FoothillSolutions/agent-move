@@ -48,9 +48,44 @@ export class StateStore {
   private _timeline: TimelineEvent[] = [];
   private _pendingPermissions = new Map<string, PendingPermission>();
   private _lastHookActivityAt: number | null = null;
+  private _isReplayMode = false;
+  private _savedTimeline: TimelineEvent[] = [];
+  private _savedAgents = new Map<string, AgentState>();
 
   get connectionStatus(): ConnectionStatus {
     return this._connectionStatus;
+  }
+
+  get isReplayMode(): boolean {
+    return this._isReplayMode;
+  }
+
+  /** Enter replay mode: save current state, clear agents, replace timeline with replay events */
+  enterReplayMode(events: TimelineEvent[]): void {
+    // Save current live state
+    this._savedTimeline = this._timeline;
+    this._savedAgents = new Map(this.agents);
+
+    // Clear agents and set replay timeline
+    this.agents.clear();
+    this._timeline = events;
+    this._isReplayMode = true;
+
+    this.emit('state:reset', this.agents);
+    this.emit('timeline:snapshot', this._timeline);
+  }
+
+  /** Exit replay mode: restore saved state */
+  exitReplayMode(): void {
+    // Restore saved state
+    this._timeline = this._savedTimeline;
+    this.agents = this._savedAgents;
+    this._savedTimeline = [];
+    this._savedAgents = new Map();
+    this._isReplayMode = false;
+
+    this.emit('state:reset', this.agents);
+    this.emit('timeline:snapshot', this._timeline);
   }
 
   setWsClient(client: WsClient): void {

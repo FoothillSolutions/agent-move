@@ -1,5 +1,5 @@
 import type { ZoneId } from './zone.js';
-import type { AgentRole } from './agent.js';
+import type { AgentRole, AgentState } from './agent.js';
 import type { ToolChainData } from './tool-chain.js';
 
 /** A persisted recording of a completed coding session */
@@ -87,6 +87,11 @@ export interface LiveSessionSummary {
   startedAt: number;
   lastActivityAt: number;
   agentCount: number;
+}
+
+/** A timeline event enriched with full agent state for visual replay */
+export interface ReplayTimelineEvent extends RecordedTimelineEvent {
+  agentState?: AgentState; // present for spawn/update/idle; absent for shutdown
 }
 
 /** Two sessions loaded for comparison */

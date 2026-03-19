@@ -68,6 +68,27 @@ export class WsClient {
     this.reconnectMs = Math.min(this.reconnectMs * 2, MAX_RECONNECT_MS);
   }
 
+  /** Pause the connection (for replay mode) — closes WS without marking as disposed */
+  pause(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    // Set disposed to suppress auto-reconnect, but remember we're just paused
+    this.disposed = true;
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+  }
+
+  /** Resume the connection (after replay mode) */
+  reconnect(): void {
+    this.disposed = false;
+    this.reconnectMs = MIN_RECONNECT_MS;
+    this.connect();
+  }
+
   disconnect(): void {
     this.disposed = true;
     if (this.reconnectTimer) {

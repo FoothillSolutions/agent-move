@@ -202,6 +202,12 @@ export class SessionRecorder {
     return session;
   }
 
+  /** Strip heavy fields from AgentState for compact replay storage */
+  private stripAgentState(agent: AgentState): Omit<AgentState, 'recentDiffs' | 'recentFiles'> {
+    const { recentDiffs: _d, recentFiles: _f, ...stripped } = agent;
+    return stripped;
+  }
+
   private onSpawn(event: AgentEvent): void {
     const agent = event.agent;
     const session = this.getOrCreateStaging(agent);
@@ -219,7 +225,8 @@ export class SessionRecorder {
       kind: 'spawn',
       zone: agent.currentZone,
     };
-    this.store.appendLiveTimelineEvent(session.rootSessionId, timelineEvent);
+    const stateJson = JSON.stringify(this.stripAgentState(agent));
+    this.store.appendLiveTimelineEvent(session.rootSessionId, timelineEvent, stateJson);
   }
 
   private onUpdate(event: AgentEvent): void {
@@ -237,7 +244,8 @@ export class SessionRecorder {
         tool: agent.currentTool,
         toolArgs: agent.currentActivity ?? undefined,
       };
-      this.store.appendLiveTimelineEvent(session.rootSessionId, timelineEvent);
+      const stateJson = JSON.stringify(this.stripAgentState(agent));
+      this.store.appendLiveTimelineEvent(session.rootSessionId, timelineEvent, stateJson);
     }
   }
 
@@ -246,12 +254,13 @@ export class SessionRecorder {
     const session = this.staging.get(agent.rootSessionId);
     if (!session) return;
 
+    const stateJson = JSON.stringify(this.stripAgentState(agent));
     this.store.appendLiveTimelineEvent(session.rootSessionId, {
       timestamp: event.timestamp,
       agentId: agent.id,
       kind: 'idle',
       zone: 'idle',
-    });
+    }, stateJson);
   }
 
   private onShutdown(event: AgentEvent): void {
@@ -451,7 +460,7 @@ export class SessionRecorder {
     const timeline = historyTimeline.length > 0 ? historyTimeline : liveTimeline;
 
     try {
-      this.store.saveSession(recorded, timeline);
+      this.store.saveSession(recorded, timeline, rootSessionId);
       // Remove live session data only after successful save (atomic finalization)
       this.store.removeLiveSession(rootSessionId);
       console.log(`Session recorded: ${sessionId} (${session.projectName}, ${agents.length} agents, ${totalToolUses} tools, $${recorded.totalCost.toFixed(4)})`);
