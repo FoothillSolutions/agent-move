@@ -183,6 +183,14 @@ export class CommandPalette {
       category: 'feature',
       action: () => this.onCommand('session-export'),
     });
+    this.actions.push({
+      id: 'feature:screenshot',
+      label: 'Screenshot Export',
+      description: 'Capture canvas as PNG (Shift+E)',
+      icon: '📸',
+      category: 'feature',
+      action: () => this.onCommand('screenshot-export'),
+    });
 
     // New features
     this.actions.push({

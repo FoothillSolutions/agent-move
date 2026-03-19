@@ -32,6 +32,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: 'A', description: 'Toggle analytics panel' },
       { keys: 'H', description: 'Toggle activity heatmap' },
       { keys: 'E', description: 'Export session summary' },
+      { keys: 'Shift + E', description: 'Screenshot export' },
       { keys: 'M', description: 'Toggle sound mute' },
     ],
   },
