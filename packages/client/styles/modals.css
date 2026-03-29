@@ -73,11 +73,47 @@
 .se-close:hover { background: var(--surface-bright); color: var(--text-primary); }
 .se-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
 .se-content { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: var(--text-sm); line-height: 1.6; color: #bbb; white-space: pre-wrap; word-break: break-word; background: rgba(0,0,0,0.2); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--surface-2); }
-.se-footer { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border-subtle); }
+.se-footer { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border-subtle); align-items: center; justify-content: space-between; }
 .se-footer button { height: var(--btn-height-md); border: 1px solid var(--border-light); border-radius: var(--radius-md); background: var(--surface-3); color: var(--text-secondary); font-family: var(--font-ui); font-size: 12px; font-weight: 500; cursor: pointer; padding: 0 16px; transition: background 0.15s, color 0.15s, border-color 0.15s; }
 .se-footer button:hover { background: var(--surface-bright); color: var(--text-primary); }
 .se-footer .se-copy-btn { background: var(--accent-dim); color: var(--accent); border-color: rgba(233, 69, 96, 0.3); }
 .se-footer .se-copy-btn:hover { background: rgba(233, 69, 96, 0.25); }
+
+/* Format toggle in session export footer */
+.se-format-toggle { display: flex; gap: 0; border: 1px solid var(--border-light); border-radius: var(--radius-md); overflow: hidden; }
+.se-format-btn { height: var(--btn-height-md); border: none !important; border-radius: 0 !important; background: var(--surface-2); color: var(--text-dim); font-family: var(--font-ui); font-size: 11px; font-weight: 600; cursor: pointer; padding: 0 14px; transition: background 0.15s, color 0.15s; }
+.se-format-btn:hover { background: var(--surface-3); color: var(--text-secondary); }
+.se-format-btn.active { background: var(--accent-dim); color: var(--accent); }
+.se-actions { display: flex; gap: 8px; }
+
+/* ── Session Detail Panel Export Dropdown ── */
+.sd-export-wrap { position: relative; margin-left: auto; }
+.sd-export-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); background: var(--surface-2);
+  color: var(--text-primary, #e0e0e0); font-size: var(--text-xs);
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
+  font-family: var(--font-ui);
+}
+.sd-export-btn:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.sd-export-btn svg { opacity: 0.7; }
+.sd-export-dropdown {
+  display: none; position: absolute; top: 100%; right: 0; margin-top: 4px;
+  min-width: 200px; background: rgba(20, 22, 44, 0.98);
+  border: 1px solid var(--border-medium); border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 10;
+  padding: 4px; font-family: var(--font-ui);
+}
+.sd-export-dropdown.open { display: block; }
+.sd-export-option {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 12px; border: none; background: transparent;
+  color: var(--text-primary, #e0e0e0); font-size: var(--text-xs);
+  cursor: pointer; border-radius: var(--radius-xs);
+  transition: background 0.1s; font-family: var(--font-ui);
+}
+.sd-export-option:hover { background: var(--surface-3); }
 
 /* ═══════════════════════════════════════════
    AGENT CUSTOMIZER

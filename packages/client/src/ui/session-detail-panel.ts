@@ -3,6 +3,9 @@ import { getFunnyName, ZONE_MAP, computeAgentCost, FILE_WRITE_TOOLS, FILE_READ_T
 import { escapeHtml, escapeAttr, formatDuration, formatTokens, truncate, getSourceIcon, getSourceLabel, resolveAgentName } from '../utils/formatting.js';
 import { fetchSession, fetchTimeline } from '../connection/session-api.js';
 import type { StateStore } from '../connection/state-store.js';
+import { assembleFromLive, assembleFromRecorded } from './export/session-export-data.js';
+import { formatMarkdown } from './export/markdown-formatter.js';
+import { formatJson } from './export/json-formatter.js';
 
 /** Minimal shape for timeline event rendering (shared between recorded + live) */
 interface TimelineEntry {
@@ -40,15 +43,8 @@ export class SessionDetailPanel {
 
     this.panelEl = document.createElement('div');
     this.panelEl.id = 'session-detail-panel';
-    this.panelEl.innerHTML = `
-      <div class="sd-header">
-        <button id="sd-back" title="Back to session list">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-          Back
-        </button>
-      </div>
-      <div id="sd-content" class="sd-content"></div>
-    `;
+    this.panelEl.textContent = '';
+    this.buildPanelDOM();
 
     const rightPanel = document.getElementById('right-panel');
     if (rightPanel) {
@@ -58,6 +54,130 @@ export class SessionDetailPanel {
     }
 
     this.panelEl.querySelector('#sd-back')!.addEventListener('click', () => this.close());
+  }
+
+  /** Build the panel DOM structure using safe DOM APIs */
+  private buildPanelDOM(): void {
+    // Header
+    const header = document.createElement('div');
+    header.className = 'sd-header';
+
+    const backBtn = document.createElement('button');
+    backBtn.id = 'sd-back';
+    backBtn.title = 'Back to session list';
+    backBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg> Back'; // eslint-disable-line no-unsanitized/property
+    header.appendChild(backBtn);
+
+    // Export wrapper
+    const exportWrap = document.createElement('div');
+    exportWrap.className = 'sd-export-wrap';
+
+    const exportBtn = document.createElement('button');
+    exportBtn.className = 'sd-export-btn';
+    exportBtn.title = 'Export session data';
+    exportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Export'; // eslint-disable-line no-unsanitized/property
+    exportWrap.appendChild(exportBtn);
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'sd-export-dropdown';
+
+    const actions = [
+      { action: 'copy-md', label: 'Copy as Markdown' },
+      { action: 'download-md', label: 'Download as Markdown' },
+      { action: 'copy-json', label: 'Copy as JSON' },
+      { action: 'download-json', label: 'Download as JSON' },
+    ];
+    for (const { action, label } of actions) {
+      const opt = document.createElement('button');
+      opt.className = 'sd-export-option';
+      opt.dataset.action = action;
+      opt.textContent = label;
+      dropdown.appendChild(opt);
+    }
+    exportWrap.appendChild(dropdown);
+    header.appendChild(exportWrap);
+
+    // Content area
+    const content = document.createElement('div');
+    content.id = 'sd-content';
+    content.className = 'sd-content';
+
+    this.panelEl.appendChild(header);
+    this.panelEl.appendChild(content);
+
+    // Bind events
+    backBtn.addEventListener('click', () => this.close());
+    exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('open');
+    });
+    // Close dropdown on outside click
+    document.addEventListener('click', () => dropdown.classList.remove('open'));
+    exportWrap.addEventListener('click', (e) => e.stopPropagation());
+
+    // Export actions
+    dropdown.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const action = target.dataset.action;
+      if (!action) return;
+      dropdown.classList.remove('open');
+      this.handleExportAction(action);
+    });
+  }
+
+  private handleExportAction(action: string): void {
+    const data = this.isLive && this.liveSession
+      ? assembleFromLive(this.store, this.liveSession.rootSessionId, undefined, {
+          shutdownTotals: { ...this.shutdownTotals },
+          activityEntries: this.liveActivityEntries,
+        })
+      : this.session
+        ? assembleFromRecorded(this.session, this.timeline)
+        : null;
+
+    if (!data) return;
+
+    const isJson = action.endsWith('-json');
+    const content = isJson ? formatJson(data) : formatMarkdown(data);
+
+    if (action.startsWith('copy-')) {
+      this.copyText(content);
+    } else {
+      const ext = isJson ? 'json' : 'md';
+      const mimeType = isJson ? 'application/json' : 'text/markdown';
+      const name = data.overview.projectName.replace(/[^a-zA-Z0-9-_]/g, '_');
+      const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      this.downloadFile(content, `agentmove-${name}-${ts}.${ext}`, mimeType);
+    }
+  }
+
+  private async copyText(text: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+      const btn = this.panelEl.querySelector('.sd-export-btn') as HTMLButtonElement | null;
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+      }
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+    }
+  }
+
+  private downloadFile(content: string, filename: string, mimeType: string): void {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   setNavigateToAgentHandler(handler: (agentId: string) => void): void {

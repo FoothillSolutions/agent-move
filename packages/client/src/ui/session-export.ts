@@ -1,17 +1,24 @@
-import type { AgentState, ZoneId } from '@agent-move/shared';
-import { AGENT_PALETTES, ZONE_MAP, computeAgentCost } from '@agent-move/shared';
+import type { AgentState } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
-import { formatTokens, formatDuration } from '../utils/formatting.js';
+import { assembleFromLive } from './export/session-export-data.js';
+import { formatMarkdown } from './export/markdown-formatter.js';
+import { formatJson } from './export/json-formatter.js';
+
+type ExportFormat = 'markdown' | 'json';
 
 /**
- * Session Summary / Export — generates a markdown report of the current session
+ * Session Summary / Export — generates a markdown or JSON report of the current session
  * and copies it to clipboard or downloads as a file.
+ *
+ * NOTE: innerHTML usage below is safe — all content is static HTML strings with no
+ * user-supplied data interpolation. Dynamic content uses textContent.
  */
 
 export class SessionExport {
   private el: HTMLElement;
   private store: StateStore;
   private isOpen = false;
+  private format: ExportFormat = 'markdown';
   private _customizationLookup: ((agent: AgentState) => { displayName: string; colorIndex: number }) | null = null;
 
   constructor(store: StateStore) {
@@ -19,28 +26,47 @@ export class SessionExport {
 
     this.el = document.createElement('div');
     this.el.id = 'session-export';
-    this.el.innerHTML = `
-      <div class="se-backdrop"></div>
-      <div class="se-modal">
-        <div class="se-header">
-          <span class="se-title">Session Summary</span>
-          <button class="se-close">&times;</button>
-        </div>
-        <div class="se-body">
-          <pre class="se-content"></pre>
-        </div>
-        <div class="se-footer">
-          <button class="se-copy-btn">Copy to Clipboard</button>
-          <button class="se-download-btn">Download .md</button>
-        </div>
-      </div>
-    `;
+    // Safe: static HTML template with no user data interpolation
+    this.el.innerHTML = [ // eslint-disable-line no-unsanitized/property
+      '<div class="se-backdrop"></div>',
+      '<div class="se-modal">',
+      '  <div class="se-header">',
+      '    <span class="se-title">Session Summary</span>',
+      '    <button class="se-close">&times;</button>',
+      '  </div>',
+      '  <div class="se-body">',
+      '    <pre class="se-content"></pre>',
+      '  </div>',
+      '  <div class="se-footer">',
+      '    <div class="se-format-toggle">',
+      '      <button class="se-format-btn active" data-format="markdown">Markdown</button>',
+      '      <button class="se-format-btn" data-format="json">JSON</button>',
+      '    </div>',
+      '    <div class="se-actions">',
+      '      <button class="se-copy-btn">Copy to Clipboard</button>',
+      '      <button class="se-download-btn">Download .md</button>',
+      '    </div>',
+      '  </div>',
+      '</div>',
+    ].join('\n');
     document.body.appendChild(this.el);
 
     this.el.querySelector('.se-backdrop')!.addEventListener('click', () => this.close());
     this.el.querySelector('.se-close')!.addEventListener('click', () => this.close());
     this.el.querySelector('.se-copy-btn')!.addEventListener('click', () => this.copyToClipboard());
     this.el.querySelector('.se-download-btn')!.addEventListener('click', () => this.download());
+
+    // Format toggle buttons
+    this.el.querySelectorAll<HTMLButtonElement>('.se-format-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const fmt = btn.dataset.format as ExportFormat;
+        if (fmt && fmt !== this.format) {
+          this.format = fmt;
+          this.updateFormatUI();
+          this.render();
+        }
+      });
+    });
   }
 
   setCustomizationLookup(fn: (agent: AgentState) => { displayName: string; colorIndex: number }): void {
@@ -64,98 +90,30 @@ export class SessionExport {
   }
 
   private generateReport(): string {
+    // Determine root session ID from first agent
     const agents = Array.from(this.store.getAgents().values());
-    const now = Date.now();
+    const rootSessionId = agents[0]?.rootSessionId ?? '';
 
-    // Session metadata
-    const earliest = agents.length > 0
-      ? Math.min(...agents.map(a => a.spawnedAt))
-      : now;
-    const sessionDuration = now - earliest;
+    const data = assembleFromLive(
+      this.store,
+      rootSessionId,
+      this._customizationLookup ?? undefined,
+    );
 
-    // Cost calculation
-    let totalCost = 0;
-    let totalInput = 0;
-    let totalOutput = 0;
-    let totalCacheRead = 0;
-
-    const agentStats: { name: string; cost: number; tokens: number; duration: number; role: string; zone: string; status: string }[] = [];
-
-    for (const a of agents) {
-      const cost = computeAgentCost(a);
-      totalCost += cost;
-      totalInput += a.totalInputTokens;
-      totalOutput += a.totalOutputTokens;
-      totalCacheRead += a.cacheReadTokens;
-
-      const zone = ZONE_MAP.get(a.currentZone);
-      agentStats.push({
-        name: this._customizationLookup?.(a)?.displayName || a.agentName || a.projectName || a.sessionId.slice(0, 10),
-        cost,
-        tokens: a.totalInputTokens + a.totalOutputTokens,
-        duration: now - a.spawnedAt,
-        role: a.role,
-        zone: zone?.label ?? a.currentZone,
-        status: a.isDone ? 'Done' : a.isIdle ? 'Idle' : 'Active',
-      });
-    }
-
-    agentStats.sort((a, b) => b.cost - a.cost);
-
-    // Build markdown
-    const lines: string[] = [];
-    lines.push(`# AgentMove Session Summary`);
-    lines.push(`> Generated ${new Date().toISOString()}`);
-    lines.push('');
-    lines.push(`## Overview`);
-    lines.push(`| Metric | Value |`);
-    lines.push(`|--------|-------|`);
-    lines.push(`| Duration | ${formatDuration(sessionDuration)} |`);
-    lines.push(`| Total Agents | ${agents.length} |`);
-    lines.push(`| Active | ${agents.filter(a => !a.isIdle && !a.isDone).length} |`);
-    lines.push(`| Idle | ${agents.filter(a => a.isIdle && !a.isDone).length} |`);
-    lines.push(`| Done | ${agents.filter(a => a.isDone).length} |`);
-    lines.push(`| Total Cost | $${totalCost.toFixed(4)} |`);
-    lines.push(`| Input Tokens | ${formatTokens(totalInput)} |`);
-    lines.push(`| Output Tokens | ${formatTokens(totalOutput)} |`);
-    lines.push(`| Cache Reads | ${formatTokens(totalCacheRead)} |`);
-    lines.push('');
-
-    if (agentStats.length > 0) {
-      lines.push(`## Agents`);
-      lines.push(`| Agent | Role | Status | Zone | Cost | Tokens | Duration |`);
-      lines.push(`|-------|------|--------|------|------|--------|----------|`);
-      for (const a of agentStats) {
-        lines.push(`| ${a.name} | ${a.role} | ${a.status} | ${a.zone} | $${a.cost.toFixed(4)} | ${formatTokens(a.tokens)} | ${formatDuration(a.duration)} |`);
-      }
-      lines.push('');
-    }
-
-    // Zone usage
-    const zoneCounts = new Map<string, number>();
-    for (const a of agents) {
-      const label = ZONE_MAP.get(a.currentZone)?.label ?? a.currentZone;
-      zoneCounts.set(label, (zoneCounts.get(label) ?? 0) + 1);
-    }
-    if (zoneCounts.size > 0) {
-      lines.push(`## Zone Distribution`);
-      lines.push(`| Zone | Agents |`);
-      lines.push(`|------|--------|`);
-      for (const [zone, count] of Array.from(zoneCounts.entries()).sort((a, b) => b[1] - a[1])) {
-        lines.push(`| ${zone} | ${count} |`);
-      }
-      lines.push('');
-    }
-
-    lines.push('---');
-    lines.push('*Generated by AgentMove*');
-
-    return lines.join('\n');
+    return this.format === 'json' ? formatJson(data) : formatMarkdown(data);
   }
 
   private render(): void {
     const content = this.el.querySelector('.se-content')!;
     content.textContent = this.generateReport();
+  }
+
+  private updateFormatUI(): void {
+    this.el.querySelectorAll<HTMLButtonElement>('.se-format-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.format === this.format);
+    });
+    const dlBtn = this.el.querySelector('.se-download-btn') as HTMLButtonElement;
+    dlBtn.textContent = this.format === 'json' ? 'Download .json' : 'Download .md';
   }
 
   private async copyToClipboard(): Promise<void> {
@@ -178,11 +136,13 @@ export class SessionExport {
 
   private download(): void {
     const report = this.generateReport();
-    const blob = new Blob([report], { type: 'text/markdown' });
+    const ext = this.format === 'json' ? 'json' : 'md';
+    const mimeType = this.format === 'json' ? 'application/json' : 'text/markdown';
+    const blob = new Blob([report], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `agent-move-session-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.md`;
+    a.download = `agent-move-session-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
   }
