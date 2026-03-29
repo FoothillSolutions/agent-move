@@ -76,8 +76,10 @@
 .se-footer { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border-subtle); }
 .se-footer button { height: var(--btn-height-md); border: 1px solid var(--border-light); border-radius: var(--radius-md); background: var(--surface-3); color: var(--text-secondary); font-family: var(--font-ui); font-size: 12px; font-weight: 500; cursor: pointer; padding: 0 16px; transition: background 0.15s, color 0.15s, border-color 0.15s; }
 .se-footer button:hover { background: var(--surface-bright); color: var(--text-primary); }
-.se-footer .se-copy-btn { background: var(--accent-dim); color: var(--accent); border-color: rgba(233, 69, 96, 0.3); }
-.se-footer .se-copy-btn:hover { background: rgba(233, 69, 96, 0.25); }
+.se-footer .se-copy-md-btn,
+.se-footer .se-copy-json-btn { background: var(--accent-dim); color: var(--accent); border-color: rgba(233, 69, 96, 0.3); }
+.se-footer .se-copy-md-btn:hover,
+.se-footer .se-copy-json-btn:hover { background: rgba(233, 69, 96, 0.25); }
 
 /* ═══════════════════════════════════════════
    AGENT CUSTOMIZER

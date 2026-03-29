@@ -1,11 +1,16 @@
-import type { AgentState, ZoneId } from '@agent-move/shared';
-import { AGENT_PALETTES, ZONE_MAP, computeAgentCost } from '@agent-move/shared';
+import type { AgentState } from '@agent-move/shared';
+import { getFunnyName } from '@agent-move/shared';
 import type { StateStore } from '../connection/state-store.js';
-import { formatTokens, formatDuration } from '../utils/formatting.js';
+import { adaptLiveSession } from '../export/session-data-adapter.js';
+import { formatSessionMarkdown, formatSessionJSON } from '../export/session-export-formatter.js';
+import { copyToClipboard, downloadFile, generateExportFilename } from '../export/export-actions.js';
 
 /**
- * Session Summary / Export — generates a markdown report of the current session
- * and copies it to clipboard or downloads as a file.
+ * Session Summary / Export — generates markdown + JSON reports of the current
+ * live session, copies to clipboard or downloads as a file.
+ *
+ * NOTE: This uses innerHTML with static, trusted HTML templates only (no user
+ * data is interpolated in the template). All user data is set via textContent.
  */
 
 export class SessionExport {
@@ -19,6 +24,7 @@ export class SessionExport {
 
     this.el = document.createElement('div');
     this.el.id = 'session-export';
+    // Static trusted template — no user data interpolated
     this.el.innerHTML = `
       <div class="se-backdrop"></div>
       <div class="se-modal">
@@ -30,8 +36,10 @@ export class SessionExport {
           <pre class="se-content"></pre>
         </div>
         <div class="se-footer">
-          <button class="se-copy-btn">Copy to Clipboard</button>
-          <button class="se-download-btn">Download .md</button>
+          <button class="se-copy-md-btn">Copy MD</button>
+          <button class="se-copy-json-btn">Copy JSON</button>
+          <button class="se-download-md-btn">Download .md</button>
+          <button class="se-download-json-btn">Download .json</button>
         </div>
       </div>
     `;
@@ -39,8 +47,10 @@ export class SessionExport {
 
     this.el.querySelector('.se-backdrop')!.addEventListener('click', () => this.close());
     this.el.querySelector('.se-close')!.addEventListener('click', () => this.close());
-    this.el.querySelector('.se-copy-btn')!.addEventListener('click', () => this.copyToClipboard());
-    this.el.querySelector('.se-download-btn')!.addEventListener('click', () => this.download());
+    this.el.querySelector('.se-copy-md-btn')!.addEventListener('click', () => this.copyMarkdown());
+    this.el.querySelector('.se-copy-json-btn')!.addEventListener('click', () => this.copyJSON());
+    this.el.querySelector('.se-download-md-btn')!.addEventListener('click', () => this.downloadMarkdown());
+    this.el.querySelector('.se-download-json-btn')!.addEventListener('click', () => this.downloadJSON());
   }
 
   setCustomizationLookup(fn: (agent: AgentState) => { displayName: string; colorIndex: number }): void {
@@ -63,128 +73,59 @@ export class SessionExport {
     this.el.classList.remove('open');
   }
 
-  private generateReport(): string {
+  private getExportableSession() {
     const agents = Array.from(this.store.getAgents().values());
-    const now = Date.now();
-
-    // Session metadata
-    const earliest = agents.length > 0
-      ? Math.min(...agents.map(a => a.spawnedAt))
-      : now;
-    const sessionDuration = now - earliest;
-
-    // Cost calculation
-    let totalCost = 0;
-    let totalInput = 0;
-    let totalOutput = 0;
-    let totalCacheRead = 0;
-
-    const agentStats: { name: string; cost: number; tokens: number; duration: number; role: string; zone: string; status: string }[] = [];
-
-    for (const a of agents) {
-      const cost = computeAgentCost(a);
-      totalCost += cost;
-      totalInput += a.totalInputTokens;
-      totalOutput += a.totalOutputTokens;
-      totalCacheRead += a.cacheReadTokens;
-
-      const zone = ZONE_MAP.get(a.currentZone);
-      agentStats.push({
-        name: this._customizationLookup?.(a)?.displayName || a.agentName || a.projectName || a.sessionId.slice(0, 10),
-        cost,
-        tokens: a.totalInputTokens + a.totalOutputTokens,
-        duration: now - a.spawnedAt,
-        role: a.role,
-        zone: zone?.label ?? a.currentZone,
-        status: a.isDone ? 'Done' : a.isIdle ? 'Idle' : 'Active',
-      });
-    }
-
-    agentStats.sort((a, b) => b.cost - a.cost);
-
-    // Build markdown
-    const lines: string[] = [];
-    lines.push(`# AgentMove Session Summary`);
-    lines.push(`> Generated ${new Date().toISOString()}`);
-    lines.push('');
-    lines.push(`## Overview`);
-    lines.push(`| Metric | Value |`);
-    lines.push(`|--------|-------|`);
-    lines.push(`| Duration | ${formatDuration(sessionDuration)} |`);
-    lines.push(`| Total Agents | ${agents.length} |`);
-    lines.push(`| Active | ${agents.filter(a => !a.isIdle && !a.isDone).length} |`);
-    lines.push(`| Idle | ${agents.filter(a => a.isIdle && !a.isDone).length} |`);
-    lines.push(`| Done | ${agents.filter(a => a.isDone).length} |`);
-    lines.push(`| Total Cost | $${totalCost.toFixed(4)} |`);
-    lines.push(`| Input Tokens | ${formatTokens(totalInput)} |`);
-    lines.push(`| Output Tokens | ${formatTokens(totalOutput)} |`);
-    lines.push(`| Cache Reads | ${formatTokens(totalCacheRead)} |`);
-    lines.push('');
-
-    if (agentStats.length > 0) {
-      lines.push(`## Agents`);
-      lines.push(`| Agent | Role | Status | Zone | Cost | Tokens | Duration |`);
-      lines.push(`|-------|------|--------|------|------|--------|----------|`);
-      for (const a of agentStats) {
-        lines.push(`| ${a.name} | ${a.role} | ${a.status} | ${a.zone} | $${a.cost.toFixed(4)} | ${formatTokens(a.tokens)} | ${formatDuration(a.duration)} |`);
+    const resolveName = (agentId: string): string => {
+      const agent = this.store.getAgent(agentId);
+      if (agent && this._customizationLookup) {
+        return this._customizationLookup(agent).displayName;
       }
-      lines.push('');
-    }
-
-    // Zone usage
-    const zoneCounts = new Map<string, number>();
-    for (const a of agents) {
-      const label = ZONE_MAP.get(a.currentZone)?.label ?? a.currentZone;
-      zoneCounts.set(label, (zoneCounts.get(label) ?? 0) + 1);
-    }
-    if (zoneCounts.size > 0) {
-      lines.push(`## Zone Distribution`);
-      lines.push(`| Zone | Agents |`);
-      lines.push(`|------|--------|`);
-      for (const [zone, count] of Array.from(zoneCounts.entries()).sort((a, b) => b[1] - a[1])) {
-        lines.push(`| ${zone} | ${count} |`);
-      }
-      lines.push('');
-    }
-
-    lines.push('---');
-    lines.push('*Generated by AgentMove*');
-
-    return lines.join('\n');
+      return agent?.agentName || getFunnyName(agentId);
+    };
+    // No shutdown totals or activity entries available in the modal context —
+    // the modal shows a snapshot of currently-live agents only.
+    return adaptLiveSession(agents, { cost: 0, input: 0, output: 0, tools: 0 }, new Map(), resolveName);
   }
 
   private render(): void {
     const content = this.el.querySelector('.se-content')!;
-    content.textContent = this.generateReport();
+    const session = this.getExportableSession();
+    // textContent is safe — no HTML injection possible
+    content.textContent = formatSessionMarkdown(session);
   }
 
-  private async copyToClipboard(): Promise<void> {
-    const report = this.generateReport();
-    try {
-      await navigator.clipboard.writeText(report);
-      const btn = this.el.querySelector('.se-copy-btn') as HTMLButtonElement;
-      btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = 'Copy to Clipboard'; }, 2000);
-    } catch {
-      // Fallback
-      const textarea = document.createElement('textarea');
-      textarea.value = report;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      textarea.remove();
+  private async copyMarkdown(): Promise<void> {
+    const session = this.getExportableSession();
+    const md = formatSessionMarkdown(session);
+    const ok = await copyToClipboard(md);
+    if (ok) this.flashButton('.se-copy-md-btn', 'Copied!', 'Copy MD');
+  }
+
+  private async copyJSON(): Promise<void> {
+    const session = this.getExportableSession();
+    const json = JSON.stringify(formatSessionJSON(session), null, 2);
+    const ok = await copyToClipboard(json);
+    if (ok) this.flashButton('.se-copy-json-btn', 'Copied!', 'Copy JSON');
+  }
+
+  private downloadMarkdown(): void {
+    const session = this.getExportableSession();
+    const md = formatSessionMarkdown(session);
+    downloadFile(md, generateExportFilename(session, 'md'), 'text/markdown');
+  }
+
+  private downloadJSON(): void {
+    const session = this.getExportableSession();
+    const json = JSON.stringify(formatSessionJSON(session), null, 2);
+    downloadFile(json, generateExportFilename(session, 'json'), 'application/json');
+  }
+
+  private flashButton(selector: string, flashText: string, originalText: string): void {
+    const btn = this.el.querySelector(selector) as HTMLButtonElement;
+    if (btn) {
+      btn.textContent = flashText;
+      setTimeout(() => { btn.textContent = originalText; }, 2000);
     }
-  }
-
-  private download(): void {
-    const report = this.generateReport();
-    const blob = new Blob([report], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `agent-move-session-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   dispose(): void {
