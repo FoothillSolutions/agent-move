@@ -379,6 +379,7 @@ async function main() {
         break;
       case 'exit-focus':         if (focusModeActive) exitFocusMode(); break;
       case 'session-export':     sessionExport.toggle(); break;
+      case 'screenshot':         captureScreenshot(); break;
       case 'toggle-trails':      trails.toggle(); break;
       case 'toggle-daynight':    world.dayNight.toggle(); break;
       case 'toggle-minimap':     minimap.toggle(); break;
@@ -416,6 +417,34 @@ async function main() {
   document.getElementById('zoom-in')!.addEventListener('click', () => world.camera.zoomIn());
   document.getElementById('zoom-out')!.addEventListener('click', () => world.camera.zoomOut());
   document.getElementById('zoom-reset')!.addEventListener('click', () => world.resetCamera());
+
+  // Screenshot capture
+  async function captureScreenshot(): Promise<void> {
+    try {
+      const renderer = pixiApp.renderer as any;
+      const canvas = await renderer.extract.canvas(pixiApp.stage) as HTMLCanvasElement;
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) { console.error('Screenshot: toBlob returned null'); return; }
+      const url = URL.createObjectURL(blob);
+      const now = new Date();
+      const ts = now.getFullYear().toString()
+        + String(now.getMonth() + 1).padStart(2, '0')
+        + String(now.getDate()).padStart(2, '0')
+        + '-'
+        + String(now.getHours()).padStart(2, '0')
+        + String(now.getMinutes()).padStart(2, '0')
+        + String(now.getSeconds()).padStart(2, '0');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `agentmove-${ts}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      console.error('Screenshot capture failed:', err);
+    }
+  }
+
+  document.getElementById('screenshot-btn')!.addEventListener('click', () => captureScreenshot());
 
   // Audio controls (mute button + volume slider in top bar)
   const muteBtn = document.getElementById('mute-btn')!;
@@ -522,6 +551,7 @@ async function main() {
     'w': 'toggle-waterfall',
     'r': 'toggle-graph',
     's': 'toggle-sessions',
+    'x': 'screenshot',
     '[': 'toggle-sidebar',
     'S': 'toggle-settings',
   };

@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "slug": "add-a-feature-for-screenshot-export",
+  "branch": "feature/add-a-feature-for-screenshot-export",
+  "started": "2026-04-04",
+  "mode": "full-kit",
+  "status": "in-progress",
+  "currentPhase": "wrap-up",
+  "currentSubStage": "wrap-up",
+  "phases": {
+    "plan": {
+      "status": "completed",
+      "subStages": {
+        "clarify": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:33:42.184Z",
+          "outcome": "pass"
+        },
+        "investigate": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:34:39.194Z",
+          "outcome": "pass"
+        },
+        "sketch": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:35:01.445Z",
+          "outcome": "pass"
+        },
+        "scope": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:35:37.665Z",
+          "outcome": "pass"
+        },
+        "ux-flow": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:35:59.535Z",
+          "outcome": "pass"
+        },
+        "architecture": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:36:19.521Z",
+          "outcome": "pass"
+        },
+        "blueprint": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:36:44.206Z",
+          "outcome": "pass"
+        },
+        "audit": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:37:03.987Z",
+          "outcome": "pass"
+        }
+      },
+      "completedAt": "2026-04-04T11:37:03.988Z"
+    },
+    "build": {
+      "status": "completed",
+      "subStages": {
+        "setup": {
+          "status": "completed",
+          "startedAt": "2026-04-04T11:40:17.864Z",
+          "completedAt": "2026-04-04T11:40:29.262Z",
+          "outcome": "pass"
+        },
+        "migration": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:40:30.837Z",
+          "outcome": "pass"
+        },
+        "red": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:40:32.513Z",
+          "outcome": "pass"
+        },
+        "core": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:39:34.799Z",
+          "outcome": "pass"
+        },
+        "ui": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:40:35.565Z",
+          "outcome": "pass"
+        },
+        "refactor": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:40:37.150Z",
+          "outcome": "pass"
+        },
+        "integration": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:39:45.307Z",
+          "outcome": "pass"
+        },
+        "commit": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:40:02.184Z",
+          "outcome": "pass"
+        }
+      },
+      "startedAt": "2026-04-04T11:37:32.366Z",
+      "completedAt": "2026-04-04T11:40:37.151Z"
+    },
+    "test": {
+      "status": "completed",
+      "subStages": {
+        "verify": {
+          "status": "completed",
+          "startedAt": "2026-04-04T11:40:45.948Z",
+          "completedAt": "2026-04-04T11:41:54.784Z",
+          "outcome": "pass"
+        },
+        "e2e": {
+          "status": "completed",
+          "startedAt": "2026-04-04T11:40:45.948Z",
+          "completedAt": "2026-04-04T11:42:01.001Z",
+          "outcome": "pass"
+        },
+        "validate": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:43:40.925Z",
+          "outcome": "pass"
+        }
+      },
+      "startedAt": "2026-04-04T11:40:45.943Z",
+      "completedAt": "2026-04-04T11:43:40.927Z"
+    },
+    "review": {
+      "status": "completed",
+      "subStages": {
+        "self-review": {
+          "status": "completed",
+          "startedAt": "2026-04-04T11:43:54.246Z",
+          "completedAt": "2026-04-04T11:45:05.407Z",
+          "outcome": "pass"
+        },
+        "security": {
+          "status": "completed",
+          "startedAt": "2026-04-04T11:43:54.246Z",
+          "completedAt": "2026-04-04T11:44:37.239Z",
+          "outcome": "pass"
+        },
+        "performance": {
+          "status": "completed",
+          "startedAt": "2026-04-04T11:43:54.246Z",
+          "completedAt": "2026-04-04T11:44:49.022Z",
+          "outcome": "pass"
+        },
+        "compliance": {
+          "status": "completed",
+          "startedAt": "2026-04-04T11:43:54.246Z",
+          "completedAt": "2026-04-04T11:45:32.328Z",
+          "outcome": "pass"
+        },
+        "handoff": {
+          "status": "completed",
+          "completedAt": "2026-04-04T11:46:48.959Z",
+          "outcome": "pass"
+        }
+      },
+      "startedAt": "2026-04-04T11:43:54.241Z",
+      "completedAt": "2026-04-04T11:46:48.959Z"
+    },
+    "deploy": {
+      "status": "skipped",
+      "subStages": {
+        "merge": {
+          "status": "skipped"
+        },
+        "monitor": {
+          "status": "skipped"
+        },
+        "remediate": {
+          "status": "skipped"
+        }
+      }
+    },
+    "wrap-up": {
+      "status": "in-progress",
+      "subStages": {
+        "wrap-up": {
+          "status": "in-progress",
+          "startedAt": "2026-04-04T11:46:59.301Z"
+        }
+      },
+      "startedAt": "2026-04-04T11:46:59.301Z"
+    }
+  },
+  "loopbacks": [],
+  "metadata": {
+    "worktreeRoot": "/home/abdullah/Desktop/projects/fts/agent-move/worktrees/screenshot-export",
+    "mainRepoRoot": "/home/abdullah/Desktop/projects/fts/agent-move/worktrees/screenshot-export"
+  }
+}
