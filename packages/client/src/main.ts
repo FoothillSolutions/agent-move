@@ -438,7 +438,7 @@ async function main() {
       a.href = url;
       a.download = `agentmove-${ts}.png`;
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
       console.error('Screenshot capture failed:', err);
     }

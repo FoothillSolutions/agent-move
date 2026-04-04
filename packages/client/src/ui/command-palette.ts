@@ -187,7 +187,7 @@ export class CommandPalette {
       id: 'feature:screenshot',
       label: 'Take Screenshot',
       description: 'Capture canvas as PNG (X)',
-      icon: '\u{1F4F7}',
+      icon: '📷',
       category: 'feature',
       action: () => this.onCommand('screenshot'),
     });
