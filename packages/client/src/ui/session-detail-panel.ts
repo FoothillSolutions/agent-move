@@ -3,6 +3,9 @@ import { getFunnyName, ZONE_MAP, computeAgentCost, FILE_WRITE_TOOLS, FILE_READ_T
 import { escapeHtml, escapeAttr, formatDuration, formatTokens, truncate, getSourceIcon, getSourceLabel, resolveAgentName } from '../utils/formatting.js';
 import { fetchSession, fetchTimeline } from '../connection/session-api.js';
 import type { StateStore } from '../connection/state-store.js';
+import { adaptRecordedSession, adaptLiveSession } from '../export/session-data-adapter.js';
+import { formatSessionMarkdown, formatSessionJSON } from '../export/session-export-formatter.js';
+import { copyToClipboard, downloadFile, generateExportFilename } from '../export/export-actions.js';
 
 /** Minimal shape for timeline event rendering (shared between recorded + live) */
 interface TimelineEntry {
@@ -40,15 +43,27 @@ export class SessionDetailPanel {
 
     this.panelEl = document.createElement('div');
     this.panelEl.id = 'session-detail-panel';
-    this.panelEl.innerHTML = `
-      <div class="sd-header">
-        <button id="sd-back" title="Back to session list">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-          Back
-        </button>
-      </div>
-      <div id="sd-content" class="sd-content"></div>
-    `;
+    // NOTE: innerHTML here uses only static trusted HTML template strings with
+    // no user data interpolation, so XSS is not a concern in this context.
+    this.panelEl.innerHTML = [ // eslint-disable-line -- static trusted template
+      '<div class="sd-header">',
+      '  <button id="sd-back" title="Back to session list">',
+      '    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>',
+      '    Back',
+      '  </button>',
+      '  <div class="sd-export-dropdown">',
+      '    <button class="sd-export-btn" title="Export session data">Export &#9662;</button>',
+      '    <div class="sd-export-menu">',
+      '      <button data-action="copy-md">Copy Markdown</button>',
+      '      <button data-action="copy-json">Copy JSON</button>',
+      '      <hr/>',
+      '      <button data-action="download-md">Download .md</button>',
+      '      <button data-action="download-json">Download .json</button>',
+      '    </div>',
+      '  </div>',
+      '</div>',
+      '<div id="sd-content" class="sd-content"></div>',
+    ].join('\n');
 
     const rightPanel = document.getElementById('right-panel');
     if (rightPanel) {
@@ -58,6 +73,25 @@ export class SessionDetailPanel {
     }
 
     this.panelEl.querySelector('#sd-back')!.addEventListener('click', () => this.close());
+
+    // Export dropdown toggle
+    const exportBtn = this.panelEl.querySelector('.sd-export-btn')!;
+    const exportMenu = this.panelEl.querySelector('.sd-export-menu')! as HTMLElement;
+    exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportMenu.classList.toggle('open');
+    });
+    // Close dropdown on outside click
+    document.addEventListener('click', () => exportMenu.classList.remove('open'));
+    // Wire export actions
+    exportMenu.querySelectorAll('button[data-action]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = (btn as HTMLElement).dataset.action;
+        exportMenu.classList.remove('open');
+        this.handleExportAction(action!);
+      });
+    });
   }
 
   setNavigateToAgentHandler(handler: (agentId: string) => void): void {
@@ -615,6 +649,69 @@ export class SessionDetailPanel {
         if (fullId) navigator.clipboard.writeText(fullId).catch(() => {});
       });
     });
+  }
+
+  // ─── Export Helpers ────────────────────────────────────────
+
+  private getExportableSession() {
+    if (this.session && !this.isLive) {
+      // Recorded session — use recorded adapter
+      return adaptRecordedSession(
+        this.session,
+        this.timeline,
+        (agentId) => this.getAgentName(agentId),
+      );
+    }
+    // Live session — use live adapter
+    const agents = this.liveSession
+      ? this.getSessionAgents(this.liveSession.rootSessionId)
+      : [];
+    return adaptLiveSession(
+      agents,
+      this.shutdownTotals,
+      this.liveActivityEntries,
+      (agentId) => {
+        const agent = this.store.getAgent(agentId);
+        return agent?.agentName || getFunnyName(agentId);
+      },
+    );
+  }
+
+  private async handleExportAction(action: string): Promise<void> {
+    const session = this.getExportableSession();
+    switch (action) {
+      case 'copy-md': {
+        const md = formatSessionMarkdown(session);
+        const ok = await copyToClipboard(md);
+        if (ok) this.flashExportButton('Copied!');
+        break;
+      }
+      case 'copy-json': {
+        const json = JSON.stringify(formatSessionJSON(session), null, 2);
+        const ok = await copyToClipboard(json);
+        if (ok) this.flashExportButton('Copied!');
+        break;
+      }
+      case 'download-md': {
+        const md = formatSessionMarkdown(session);
+        downloadFile(md, generateExportFilename(session, 'md'), 'text/markdown');
+        break;
+      }
+      case 'download-json': {
+        const json = JSON.stringify(formatSessionJSON(session), null, 2);
+        downloadFile(json, generateExportFilename(session, 'json'), 'application/json');
+        break;
+      }
+    }
+  }
+
+  private flashExportButton(text: string): void {
+    const btn = this.panelEl.querySelector('.sd-export-btn') as HTMLButtonElement;
+    if (btn) {
+      const original = btn.textContent;
+      btn.textContent = text;
+      setTimeout(() => { btn.textContent = original; }, 2000);
+    }
   }
 
   dispose(): void {
